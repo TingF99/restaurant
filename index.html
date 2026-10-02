@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f4ef">
+  <title>候位管理 | TABLE / 01</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202924;
+      --muted: #737c75;
+      --paper: #f4f4ef;
+      --white: #fffefa;
+      --line: #dfe3da;
+      --green: #26735c;
+      --green-pale: #e4f0e9;
+      --orange: #e18a50;
+      --orange-pale: #fbede1;
+      --red: #a44d43;
+      --shadow: 0 14px 38px #23392d0c;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: radial-gradient(ellipse at 90% 0%, #e4eee4 0, transparent 34%), var(--paper);
+      font-family: "Aptos", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1160px, calc(100% - 40px)); margin: 0 auto; padding: 30px 0 38px; }
+    .topline { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: .83rem; font-weight: 850; letter-spacing: .08em; }
+    .brand-mark { display: grid; place-items: center; width: 34px; aspect-ratio: 1; border-radius: 10px; color: white; background: var(--green); font-size: .75rem; }
+    .service-state { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .84rem; }
+    .service-state::before { content: ""; width: 8px; aspect-ratio: 1; border-radius: 50%; background: #5caa79; box-shadow: 0 0 0 4px #5caa791c; }
+    header { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding: 30px 0 24px; }
+    .kicker { margin: 0 0 8px; color: var(--green); font-size: .73rem; font-weight: 850; letter-spacing: .13em; }
+    h1 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.12; }
+    .subtitle { margin: 9px 0 0; color: var(--muted); font-size: .94rem; }
+    .date-label { color: var(--muted); font-size: .84rem; white-space: nowrap; }
+    .dashboard { display: grid; grid-template-columns: 1.15fr 1fr .72fr; gap: 12px; }
+    .metric { min-height: 116px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 8px; background: #fffefaaf; }
+    .metric.serving { color: white; border-color: var(--green); background: var(--green); }
+    .metric-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .metric-label { font-size: .79rem; font-weight: 750; opacity: .78; }
+    .metric-icon { color: var(--orange); font-size: .8rem; font-weight: 900; }
+    .metric.serving .metric-icon { color: #d7f1df; }
+    .metric-main { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; }
+    .metric-number { font-size: 2.05rem; font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
+    .metric-name { font-size: .9rem; opacity: .82; }
+    .metric-empty { color: var(--muted); font-size: .94rem; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(285px, .8fr); gap: 14px; margin-top: 14px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; background: var(--white); box-shadow: var(--shadow); }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 17px 20px; border-bottom: 1px solid var(--line); }
+    .panel-heading h2 { margin: 0; font-size: .98rem; }
+    .panel-meta { color: var(--muted); font-size: .77rem; }
+    .queue-wrap { padding: 22px 18px 18px; }
+    .queue-track { display: flex; align-items: stretch; gap: 10px; min-height: 145px; padding: 8px 2px 14px; overflow-x: auto; scrollbar-color: #c5cec5 transparent; scrollbar-width: thin; }
+    .queue-empty { display: grid; place-items: center; width: 100%; min-width: 190px; padding: 26px; color: var(--muted); border: 1px dashed #cbd3c9; border-radius: 8px; font-size: .88rem; }
+    .guest-card { position: relative; flex: 0 0 150px; min-height: 112px; padding: 18px 14px 12px; border: 1px solid var(--line); border-radius: 7px; background: #fff; animation: arrive .25s ease-out both; }
+    .guest-card.is-front { border-color: #85b39c; background: #f1f7f2; }
+    .ticket { color: var(--green); font-size: .72rem; font-weight: 850; letter-spacing: .07em; }
+    .guest-name { margin: 8px 0 4px; overflow: hidden; font-size: 1.02rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .guest-phone { color: var(--muted); font-size: .77rem; }
+    .tags { position: absolute; top: -9px; right: 7px; display: flex; gap: 4px; }
+    .tag { padding: 3px 6px; border-radius: 4px; color: white; background: var(--green); font-size: .62rem; font-weight: 850; }
+    .tag.back { background: var(--orange); }
+    .entry-note { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 11px; border-top: 1px solid #edf0e9; color: var(--muted); font-size: .75rem; }
+    .entry-arrow { color: var(--orange); font-size: 1.15rem; font-weight: 900; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .action { min-height: 42px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: white; font-size: .82rem; font-weight: 800; transition: background .15s, border-color .15s, transform .15s; }
+    .action:hover { transform: translateY(-1px); border-color: #aebcaf; background: #f7f9f5; }
+    .action.primary { color: white; border-color: var(--green); background: var(--green); }
+    .action.primary:hover { background: #1d614d; }
+    .action:disabled { cursor: not-allowed; opacity: .45; transform: none; }
+    .section-pad { padding: 18px 20px 20px; }
+    .form-grid { display: grid; gap: 12px; }
+    label { display: grid; gap: 6px; color: #515b54; font-size: .78rem; font-weight: 750; }
+    input { width: 100%; height: 41px; padding: 0 11px; border: 1px solid #dce2da; border-radius: 5px; outline: none; color: var(--ink); background: white; font-size: .88rem; }
+    input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #26735c1c; }
+    .form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 3px; }
+    .status-list { margin: 0; }
+    .status-row { display: grid; grid-template-columns: 1fr minmax(0, 1.35fr); gap: 12px; padding: 11px 0; border-bottom: 1px solid #edf0e9; }
+    .status-row:last-child { border-bottom: 0; }
+    .status-row dt { color: var(--muted); font-size: .75rem; font-weight: 750; letter-spacing: .035em; }
+    .status-row dd { margin: 0; overflow-wrap: anywhere; text-align: right; font-size: .79rem; font-weight: 700; }
+    .status-person { display: grid; gap: 3px; }
+    .status-person span { color: var(--muted); font-size: .73rem; font-weight: 500; }
+    .lower-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(285px, .8fr); gap: 14px; margin-top: 14px; }
+    .log { display: flex; flex-direction: column; gap: 9px; max-height: 205px; min-height: 76px; overflow-y: auto; padding: 15px 20px; color: #35483d; background: #f8faf6; font: .79rem/1.55 "Cascadia Code", Consolas, monospace; }
+    .log-line { display: flex; gap: 10px; }
+    .log-time { flex: 0 0 auto; color: #89958c; }
+    .log-message { overflow-wrap: anywhere; }
+    .log-empty { color: var(--muted); }
+    .closing { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 20px; }
+    .closing-copy { color: var(--muted); font-size: .78rem; }
+    .action.danger { color: var(--red); border-color: #ead5d1; }
+    .action.danger:hover { background: #fcf3f1; }
+    .notice { min-height: 20px; margin: 11px 0 0; color: var(--red); font-size: .78rem; }
+    @keyframes arrive { from { opacity: 0; transform: translateX(7px); } to { opacity: 1; transform: translateX(0); } }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 28px, 560px); padding-top: 18px; }
+      header { align-items: start; padding: 24px 0 18px; }
+      .date-label { display: none; }
+      .dashboard { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .metric:first-child { grid-column: 1 / -1; }
+      .workspace, .lower-grid { grid-template-columns: minmax(0, 1fr); }
+      .workspace > *, .lower-grid > * { min-width: 0; }
+    }
+    @media (max-width: 360px) {
+      .dashboard { grid-template-columns: minmax(0, 1fr); }
+      .metric:first-child { grid-column: auto; }
+    }
+    @media (max-width: 420px) {
+      .shell { width: calc(100% - 22px); }
+      .panel-heading, .section-pad { padding-right: 15px; padding-left: 15px; }
+      .queue-wrap { padding-right: 13px; padding-left: 13px; }
+      .actions { grid-template-columns: 1fr 1fr; }
+      .actions .action:last-child { grid-column: 1 / -1; }
+      .metric { padding: 16px; }
+      .metric-number { font-size: 1.8rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topline">
+      <div class="brand"><span class="brand-mark">T/1</span><span>TABLE SERVICE</span></div>
+      <span class="service-state" id="serviceState">營業中</span>
+    </div>
+
+    <header>
+      <div>
+        <p class="kicker">FRONT OF HOUSE / QUEUE</p>
+        <h1>餐廳候位管理</h1>
+        <p class="subtitle">依序候位，讓每一桌都從容入席。</p>
+      </div>
+      <time class="date-label" id="today"></time>
+    </header>
+
+    <section class="dashboard" aria-label="候位儀表板">
+      <article class="metric serving">
+        <div class="metric-top"><span class="metric-label">目前叫號 · NOW SERVING</span><span class="metric-icon">●</span></div>
+        <div class="metric-main" id="servingDisplay"><span class="metric-empty">尚未叫號</span></div>
+      </article>
+      <article class="metric">
+        <div class="metric-top"><span class="metric-label">下一位 · NEXT</span><span class="metric-icon">→</span></div>
+        <div class="metric-main" id="nextDisplay"><span class="metric-empty">目前無人候位</span></div>
+      </article>
+      <article class="metric">
+        <div class="metric-top"><span class="metric-label">候位人數 · WAITING</span><span class="metric-icon">01</span></div>
+        <div class="metric-main"><strong class="metric-number" id="waitingCount">0</strong><span class="metric-name">組</span></div>
+      </article>
+    </section>
+
+    <section class="workspace">
+      <div>
+        <section class="panel" aria-labelledby="queueHeading">
+          <div class="panel-heading"><h2 id="queueHeading">候位隊列</h2><span class="panel-meta" id="queueMeta">FIFO · 0 組等候</span></div>
+          <div class="queue-wrap">
+            <div class="queue-track" id="queueTrack" aria-live="polite"></div>
+            <div class="entry-note"><span>新客人由此加入</span><span class="entry-arrow" aria-hidden="true">←</span><strong>入口</strong></div>
+            <div class="actions">
+              <button class="action primary" id="callButton" type="button" disabled>叫下一位</button>
+              <button class="action" id="peekButton" type="button" disabled>看下一位</button>
+              <button class="action" id="sampleButton" type="button">＋ 範例客人</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:14px" aria-labelledby="logHeading">
+          <div class="panel-heading"><h2 id="logHeading">操作日誌</h2><span class="panel-meta">LIVE LOG</span></div>
+          <div class="log" id="actionLogs" role="log" aria-live="polite" aria-relevant="additions"></div>
+        </section>
+      </div>
+
+      <aside>
+        <section class="panel" aria-labelledby="registerHeading">
+          <div class="panel-heading"><h2 id="registerHeading">登記候位</h2><span class="panel-meta">NEW GUEST</span></div>
+          <form class="section-pad" id="guestForm">
+            <div class="form-grid">
+              <label for="guestName">姓名<input id="guestName" name="name" autocomplete="name" maxlength="40" placeholder="例如：林小姐" required></label>
+              <label for="guestPhone">電話<input id="guestPhone" name="phone" type="tel" autocomplete="tel" maxlength="24" placeholder="例如：0912-345-678" required></label>
+              <div class="form-actions">
+                <button class="action primary" type="submit">＋ 登記候位</button>
+                <button class="action" id="formSampleButton" type="button">隨機資料</button>
+              </div>
+              <p class="notice" id="formNotice" aria-live="polite"></p>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel" style="margin-top:14px" aria-labelledby="statusHeading">
+          <div class="panel-heading"><h2 id="statusHeading">Queue 狀態</h2><span class="panel-meta">MONITOR</span></div>
+          <div class="section-pad">
+            <dl class="status-list">
+              <div class="status-row"><dt>SIZE</dt><dd id="statusSize">0 組</dd></div>
+              <div class="status-row"><dt>下一張號碼牌</dt><dd id="statusTicket">#001</dd></div>
+              <div class="status-row"><dt>FRONT</dt><dd id="statusFront">空</dd></div>
+              <div class="status-row"><dt>BACK</dt><dd id="statusBack">空</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:14px" aria-label="打烊操作">
+          <div class="closing"><span class="closing-copy">結束今日候位服務</span><button class="action danger" id="closeButton" type="button">打烊清空</button></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const queue = [];
+    const actionLogs = [];
+    let nowServing = null;
+    let nextTicketNumber = 1;
+
+    const elements = {
+      queueTrack: document.querySelector('#queueTrack'),
+      guestForm: document.querySelector('#guestForm'),
+      guestName: document.querySelector('#guestName'),
+      guestPhone: document.querySelector('#guestPhone'),
+      formNotice: document.querySelector('#formNotice'),
+      servingDisplay: document.querySelector('#servingDisplay'),
+      nextDisplay: document.querySelector('#nextDisplay'),
+      waitingCount: document.querySelector('#waitingCount'),
+      queueMeta: document.querySelector('#queueMeta'),
+      statusSize: document.querySelector('#statusSize'),
+      statusTicket: document.querySelector('#statusTicket'),
+      statusFront: document.querySelector('#statusFront'),
+      statusBack: document.querySelector('#statusBack'),
+      actionLogs: document.querySelector('#actionLogs'),
+      callButton: document.querySelector('#callButton'),
+      peekButton: document.querySelector('#peekButton'),
+      serviceState: document.querySelector('#serviceState')
+    };
+
+    function formatTicket(ticketNumber) {
+      return `#${String(ticketNumber).padStart(3, '0')}`;
+    }
+
+    function renderGuest(guest, includePhone = false) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'status-person';
+      const primary = document.createElement('strong');
+      primary.textContent = `${formatTicket(guest.ticketNumber)} ${guest.name}`;
+      wrapper.append(primary);
+      if (includePhone) {
+        const phone = document.createElement('span');
+        phone.textContent = guest.phone;
+        wrapper.append(phone);
+      }
+      return wrapper;
+    }
+
+    function addLog(message) {
+      const now = new Date();
+      const time = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      actionLogs.unshift({ time, message });
+      actionLogs.splice(80);
+      renderLogs();
+    }
+
+    function renderLogs() {
+      elements.actionLogs.replaceChildren();
+      if (actionLogs.length === 0) {
+        const empty = document.createElement('span');
+        empty.className = 'log-empty';
+        empty.textContent = '> 等待操作...';
+        elements.actionLogs.append(empty);
+        return;
+      }
+      actionLogs.forEach(({ time, message }) => {
+        const row = document.createElement('div');
+        row.className = 'log-line';
+        const timestamp = document.createElement('span');
+        timestamp.className = 'log-time';
+        timestamp.textContent = time;
+        const text = document.createElement('span');
+        text.className = 'log-message';
+        text.textContent = `> ${message}`;
+        row.append(timestamp, text);
+        elements.actionLogs.append(row);
+      });
+    }
+
+    function renderQueue() {
+      elements.queueTrack.replaceChildren();
+      if (queue.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'queue-empty';
+        empty.textContent = '目前沒有候位客人';
+        elements.queueTrack.append(empty);
+      } else {
+        queue.forEach((guest, index) => {
+          const card = document.createElement('article');
+          card.className = `guest-card${index === 0 ? ' is-front' : ''}`;
+          const tags = document.createElement('div');
+          tags.className = 'tags';
+          if (index === 0) {
+            const frontTag = document.createElement('span');
+            frontTag.className = 'tag';
+            frontTag.textContent = 'FRONT';
+            tags.append(frontTag);
+          }
+          if (index === queue.length - 1) {
+            const backTag = document.createElement('span');
+            backTag.className = 'tag back';
+            backTag.textContent = 'BACK';
+            tags.append(backTag);
+          }
+          const ticket = document.createElement('div');
+          ticket.className = 'ticket';
+          ticket.textContent = formatTicket(guest.ticketNumber);
+          const name = document.createElement('h3');
+          name.className = 'guest-name';
+          name.textContent = guest.name;
+          const phone = document.createElement('div');
+          phone.className = 'guest-phone';
+          phone.textContent = guest.phone;
+          card.append(tags, ticket, name, phone);
+          elements.queueTrack.append(card);
+        });
+      }
+
+      const size = queue.length;
+      elements.waitingCount.textContent = String(size);
+      elements.queueMeta.textContent = `FIFO · ${size} 組等候`;
+      elements.statusSize.textContent = `${size} 組`;
+      elements.statusTicket.textContent = formatTicket(nextTicketNumber);
+      elements.statusFront.replaceChildren(queue[0] ? renderGuest(queue[0], true) : document.createTextNode('空'));
+      elements.statusBack.replaceChildren(queue[size - 1] ? renderGuest(queue[size - 1], true) : document.createTextNode('空'));
+      elements.callButton.disabled = size === 0;
+      elements.peekButton.disabled = size === 0;
+
+      elements.nextDisplay.replaceChildren();
+      if (queue[0]) {
+        const ticket = document.createElement('strong');
+        ticket.className = 'metric-number';
+        ticket.textContent = formatTicket(queue[0].ticketNumber);
+        const name = document.createElement('span');
+        name.className = 'metric-name';
+        name.textContent = queue[0].name;
+        elements.nextDisplay.append(ticket, name);
+      } else {
+        const empty = document.createElement('span');
+        empty.className = 'metric-empty';
+        empty.textContent = '目前無人候位';
+        elements.nextDisplay.append(empty);
+      }
+    }
+
+    function pushGuest(name, phone) {
+      const guest = { ticketNumber: nextTicketNumber, name, phone };
+      nextTicketNumber += 1;
+      queue.push(guest);
+      addLog(`登記候位 ${guest.name} ${guest.phone}（${formatTicket(guest.ticketNumber)}）`);
+      renderQueue();
+      return guest;
+    }
+
+    function makeSampleGuest() {
+      const samples = [
+        { name: '林小姐', phone: '0912-345-678' },
+        { name: '陳先生', phone: '0928-610-254' },
+        { name: '王小晴', phone: '0987-220-416' },
+        { name: '張家豪', phone: '0935-702-433' },
+        { name: '黃小姐', phone: '0966-318-520' }
+      ];
+      const sample = samples[Math.floor(Math.random() * samples.length)];
+      pushGuest(sample.name, sample.phone);
+    }
+
+    elements.guestForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = elements.guestName.value.trim();
+      const phone = elements.guestPhone.value.trim();
+      if (!name || !phone) {
+        elements.formNotice.textContent = '請填寫姓名與電話。';
+        return;
+      }
+      elements.formNotice.textContent = '';
+      pushGuest(name, phone);
+      elements.guestForm.reset();
+      elements.guestName.focus();
+    });
+
+    document.querySelector('#sampleButton').addEventListener('click', makeSampleGuest);
+    document.querySelector('#formSampleButton').addEventListener('click', makeSampleGuest);
+    elements.callButton.addEventListener('click', () => {
+      if (queue.length === 0) return;
+      nowServing = queue.shift();
+      elements.servingDisplay.replaceChildren(renderGuest(nowServing));
+      addLog(`叫號 ${nowServing.name}（${formatTicket(nowServing.ticketNumber)}）`);
+      renderQueue();
+    });
+    elements.peekButton.addEventListener('click', () => {
+      const guest = queue[0];
+      if (!guest) return;
+      addLog(`查看下一位 ${guest.name}（${formatTicket(guest.ticketNumber)}），未移出隊列`);
+    });
+    document.querySelector('#closeButton').addEventListener('click', () => {
+      if (!window.confirm('打烊清空會重置候位名單、叫號紀錄與號碼牌，確定要繼續嗎？')) return;
+      queue.length = 0;
+      actionLogs.length = 0;
+      nowServing = null;
+      nextTicketNumber = 1;
+      elements.servingDisplay.replaceChildren(Object.assign(document.createElement('span'), { className: 'metric-empty', textContent: '尚未叫號' }));
+      elements.guestForm.reset();
+      elements.formNotice.textContent = '';
+      elements.serviceState.textContent = '營業中';
+      renderQueue();
+      renderLogs();
+      addLog('打烊清空，候位系統已重置');
+    });
+
+    document.querySelector('#today').textContent = new Intl.DateTimeFormat('zh-TW', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+    }).format(new Date());
+    renderQueue();
+    renderLogs();
+  </script>
+</body>
+</html>
