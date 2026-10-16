@@ -17,6 +17,8 @@
       --green-dark: #1e5d4a;
       --green-pale: #e6f0e9;
       --gold: #d3a443;
+      --blue: #327aa0;
+      --blue-pale: #e6f1f7;
       --shadow: 0 12px 36px #243c300d;
       font-family: "Aptos", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     }
@@ -53,25 +55,59 @@
     .panel-meta { color: var(--muted); font: 700 .68rem "Cascadia Code", Consolas, monospace; letter-spacing: .05em; }
     .map-wrap { padding: 14px; }
     .map { display: block; width: 100%; height: auto; }
-    .road { stroke: #aab8aa; stroke-width: 4; stroke-linecap: round; }
+    .road { stroke: #aab8aa; stroke-width: 4; stroke-linecap: round; transition: stroke .2s, stroke-width .2s; }
+    .road.explored { stroke: var(--blue); stroke-width: 6; }
+    .road.route { stroke: var(--gold); stroke-width: 7; }
     .road-label { fill: var(--muted); font: 700 13px "Cascadia Code", Consolas, monospace; paint-order: stroke; stroke: var(--white); stroke-width: 5px; stroke-linejoin: round; text-anchor: middle; }
     .place circle { fill: var(--green-pale); stroke: var(--green); stroke-width: 3; }
+    .place.visited circle { fill: var(--blue-pale); stroke: var(--blue); }
+    .place.current circle { fill: var(--blue); }
+    .place.current text { fill: white; }
+    .place.route circle { fill: #f8edcf; stroke: var(--gold); stroke-width: 5; }
+    .place.route text { fill: #574316; }
     .place text { fill: var(--green-dark); font: 800 21px "Cascadia Code", Consolas, monospace; text-anchor: middle; dominant-baseline: central; }
     .place.start circle, .place.end circle { fill: var(--green); }
     .place.start text, .place.end text { fill: white; }
+    .place.start.visited circle, .place.end.visited circle,
+    .place.start.current circle, .place.end.current circle { fill: var(--blue); stroke: var(--blue); }
+    .place.start.route circle, .place.end.route circle { fill: #f8edcf; stroke: var(--gold); }
+    .place.start.route text, .place.end.route text { fill: #574316; }
     .legend { display: flex; flex-wrap: wrap; gap: 15px; padding: 0 18px 16px; color: var(--muted); font-size: .72rem; }
     .legend-item { display: inline-flex; align-items: center; gap: 7px; }
     .legend-dot { width: 11px; height: 11px; border: 2px solid var(--green); border-radius: 50%; background: var(--green-pale); }
     .legend-dot.special { border-color: var(--green); background: var(--green); }
+    .legend-dot.explored { border-color: var(--blue); background: var(--blue-pale); }
+    .legend-dot.route { border-color: var(--gold); background: #f8edcf; }
     .road-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; padding: 14px; }
     .road-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #e8e9e1; border-radius: 5px; background: #fffefa; }
     .road-item span { color: var(--muted); font-size: .68rem; }
     .road-item strong { color: var(--green-dark); font: 750 .77rem "Cascadia Code", Consolas, monospace; white-space: nowrap; }
     .note { margin: 0; padding: 0 16px 15px; color: var(--muted); font-size: .72rem; line-height: 1.6; }
+    .traversal-panel { margin-top: 14px; }
+    .traversal-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .8fr); gap: 22px; padding: 17px; }
+    .traversal-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+    .field { display: grid; gap: 6px; color: #505b53; font-size: .73rem; font-weight: 750; }
+    .field select { width: 100%; min-height: 39px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: white; font: 750 .8rem "Cascadia Code", Consolas, monospace; }
+    .field select:focus, .traversal-button:focus-visible { outline: 3px solid #26735c33; outline-offset: 2px; }
+    .traversal-actions { display: flex; flex-wrap: wrap; gap: 7px; grid-column: 1 / -1; }
+    .traversal-button { min-height: 38px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: white; font: inherit; font-size: .75rem; font-weight: 750; cursor: pointer; }
+    .traversal-button:hover:not(:disabled) { border-color: #aab8aa; background: #f7f9f4; }
+    .traversal-button:disabled { cursor: wait; opacity: .55; }
+    .traversal-button.primary { border-color: var(--green); color: white; background: var(--green); }
+    .traversal-button.primary:hover:not(:disabled) { background: var(--green-dark); }
+    .traversal-result { min-width: 0; padding: 12px 14px; border: 1px solid #e8e9e1; border-radius: 6px; background: #fafaf6; }
+    .traversal-status { min-height: 38px; margin: 0 0 10px; color: var(--muted); font-size: .77rem; line-height: 1.55; }
+    .traversal-order-label { margin: 0 0 7px; color: var(--muted); font-size: .68rem; font-weight: 750; }
+    .traversal-order { display: flex; flex-wrap: wrap; gap: 5px; min-height: 28px; }
+    .order-chip { display: inline-grid; min-width: 27px; height: 27px; place-items: center; border: 1px solid #b9c8b8; border-radius: 50%; color: var(--green-dark); background: var(--green-pale); font: 750 .72rem "Cascadia Code", Consolas, monospace; }
+    .order-chip.current { border-color: var(--blue); color: white; background: var(--blue); }
+    .order-chip.route { border-color: var(--gold); color: #574316; background: #f8edcf; }
+    .traversal-hint { grid-column: 1 / -1; margin: -9px 0 0; color: var(--muted); font-size: .7rem; line-height: 1.6; }
 
     @media (max-width: 760px) {
       .layout { grid-template-columns: 1fr; }
       .road-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .traversal-content { grid-template-columns: 1fr; gap: 12px; }
     }
 
     @media (max-width: 520px) {
@@ -85,6 +121,7 @@
       .map-wrap { padding: 5px; }
       .road-label { font-size: 15px; }
       .road-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .traversal-controls { gap: 8px; }
     }
   </style>
 </head>
@@ -118,15 +155,15 @@
             <title id="mapTitle">A 到 F 六個地點與九條道路的地圖</title>
             <desc id="mapDescription">道路為 A 到 B、A 到 C、B 到 C、C 到 D、C 到 E、D 到 E、E 到 F、D 到 F、B 到 D。</desc>
             <g class="roads" fill="none" aria-hidden="true">
-              <line class="road" x1="120" y1="280" x2="300" y2="145" />
-              <line class="road" x1="120" y1="280" x2="300" y2="415" />
-              <line class="road" x1="300" y1="145" x2="300" y2="415" />
-              <line class="road" x1="300" y1="415" x2="580" y2="145" />
-              <line class="road" x1="300" y1="415" x2="580" y2="415" />
-              <line class="road" x1="580" y1="145" x2="580" y2="415" />
-              <line class="road" x1="580" y1="415" x2="790" y2="280" />
-              <line class="road" x1="580" y1="145" x2="790" y2="280" />
-              <line class="road" x1="300" y1="145" x2="580" y2="145" />
+              <line class="road" data-edge="A-B" x1="120" y1="280" x2="300" y2="145" />
+              <line class="road" data-edge="A-C" x1="120" y1="280" x2="300" y2="415" />
+              <line class="road" data-edge="B-C" x1="300" y1="145" x2="300" y2="415" />
+              <line class="road" data-edge="C-D" x1="300" y1="415" x2="580" y2="145" />
+              <line class="road" data-edge="C-E" x1="300" y1="415" x2="580" y2="415" />
+              <line class="road" data-edge="D-E" x1="580" y1="145" x2="580" y2="415" />
+              <line class="road" data-edge="E-F" x1="580" y1="415" x2="790" y2="280" />
+              <line class="road" data-edge="D-F" x1="580" y1="145" x2="790" y2="280" />
+              <line class="road" data-edge="B-D" x1="300" y1="145" x2="580" y2="145" />
             </g>
             <g aria-hidden="true">
               <text class="road-label" x="205" y="195">A—B</text>
@@ -139,30 +176,31 @@
               <text class="road-label" x="690" y="205">D—F</text>
               <text class="road-label" x="440" y="130">B—D</text>
             </g>
-            <g class="place start" transform="translate(120 280)">
+            <g class="place start" data-place="A" transform="translate(120 280)">
               <circle r="31" /><text y="1">A</text>
             </g>
-            <g class="place" transform="translate(300 145)">
+            <g class="place" data-place="B" transform="translate(300 145)">
               <circle r="31" /><text y="1">B</text>
             </g>
-            <g class="place" transform="translate(300 415)">
+            <g class="place" data-place="C" transform="translate(300 415)">
               <circle r="31" /><text y="1">C</text>
             </g>
-            <g class="place" transform="translate(580 145)">
+            <g class="place" data-place="D" transform="translate(580 145)">
               <circle r="31" /><text y="1">D</text>
             </g>
-            <g class="place" transform="translate(580 415)">
+            <g class="place" data-place="E" transform="translate(580 415)">
               <circle r="31" /><text y="1">E</text>
             </g>
-            <g class="place end" transform="translate(790 280)">
+            <g class="place end" data-place="F" transform="translate(790 280)">
               <circle r="31" /><text y="1">F</text>
             </g>
           </svg>
         </div>
         <div class="legend" aria-label="圖例">
-          <span class="legend-item"><i class="legend-dot special"></i>A、F 地點</span>
-          <span class="legend-item"><i class="legend-dot"></i>其他地點</span>
-          <span class="legend-item">線段代表雙向道路</span>
+          <span class="legend-item"><i class="legend-dot special"></i>起點／終點</span>
+          <span class="legend-item"><i class="legend-dot"></i>一般地點</span>
+          <span class="legend-item"><i class="legend-dot explored"></i>搜尋經過</span>
+          <span class="legend-item"><i class="legend-dot route"></i>找到的路徑</span>
         </div>
       </section>
 
@@ -185,6 +223,176 @@
         <p class="note">每條道路皆可雙向通行；圖中位置只用來呈現連線關係。</p>
       </aside>
     </div>
+
+    <section class="panel traversal-panel" aria-labelledby="traversalHeading">
+      <div class="panel-heading">
+        <h2 id="traversalHeading">DFS / BFS 尋路</h2>
+        <span class="panel-meta">GRAPH SEARCH</span>
+      </div>
+      <div class="traversal-content">
+        <div class="traversal-controls">
+          <label class="field" for="startPlace">起點
+            <select id="startPlace">
+              <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option>
+            </select>
+          </label>
+          <label class="field" for="endPlace">終點
+            <select id="endPlace">
+              <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option selected>F</option>
+            </select>
+          </label>
+          <div class="traversal-actions">
+            <button class="traversal-button primary" id="dfsButton" type="button">播放 DFS</button>
+            <button class="traversal-button primary" id="bfsButton" type="button">播放 BFS</button>
+            <button class="traversal-button" id="resetSearchButton" type="button">清除路徑</button>
+          </div>
+        </div>
+        <div class="traversal-result" aria-live="polite">
+          <p class="traversal-status" id="traversalStatus">選擇起點與終點，再播放 DFS 或 BFS。</p>
+          <p class="traversal-order-label">探索順序</p>
+          <div class="traversal-order" id="traversalOrder" aria-label="地點探索順序"></div>
+        </div>
+        <p class="traversal-hint">DFS（深度優先）會先沿著一條分支深入；BFS（廣度優先）會逐層探索並找到最少道路數的路徑。相鄰地點依 A 到 F 的字母順序探索。</p>
+      </div>
+    </section>
   </main>
+  <script>
+    const adjacency = {
+      A: ['B', 'C'],
+      B: ['A', 'C', 'D'],
+      C: ['A', 'B', 'D', 'E'],
+      D: ['B', 'C', 'E', 'F'],
+      E: ['C', 'D', 'F'],
+      F: ['D', 'E']
+    };
+    const places = [...document.querySelectorAll('[data-place]')];
+    const roads = [...document.querySelectorAll('[data-edge]')];
+    const startSelect = document.querySelector('#startPlace');
+    const endSelect = document.querySelector('#endPlace');
+    const status = document.querySelector('#traversalStatus');
+    const order = document.querySelector('#traversalOrder');
+    const dfsButton = document.querySelector('#dfsButton');
+    const bfsButton = document.querySelector('#bfsButton');
+    let animationId = 0;
+
+    function clearSearch() {
+      animationId += 1;
+      places.forEach((place) => place.classList.remove('visited', 'current', 'route'));
+      roads.forEach((road) => road.classList.remove('explored', 'route'));
+      order.replaceChildren();
+      status.textContent = '選擇起點與終點，再播放 DFS 或 BFS。';
+      dfsButton.disabled = false;
+      bfsButton.disabled = false;
+      startSelect.disabled = false;
+      endSelect.disabled = false;
+    }
+
+    function findRoute(method, start, destination) {
+      const visited = [];
+      const parent = new Map();
+      const seen = new Set([start]);
+
+      if (method === 'BFS') {
+        const queue = [start];
+        for (let index = 0; index < queue.length; index += 1) {
+          const current = queue[index];
+          visited.push(current);
+          if (current === destination) break;
+          adjacency[current].forEach((neighbor) => {
+            if (!seen.has(neighbor)) {
+              seen.add(neighbor);
+              parent.set(neighbor, current);
+              queue.push(neighbor);
+            }
+          });
+        }
+      } else {
+        function visit(current) {
+          visited.push(current);
+          if (current === destination) return true;
+          for (const neighbor of adjacency[current]) {
+            if (!seen.has(neighbor)) {
+              seen.add(neighbor);
+              parent.set(neighbor, current);
+              if (visit(neighbor)) return true;
+            }
+          }
+          return false;
+        }
+        visit(start);
+      }
+
+      const route = [destination];
+      while (route[0] !== start && parent.has(route[0])) {
+        route.unshift(parent.get(route[0]));
+      }
+      return { visited, route, parent };
+    }
+
+    function showOrder(visited, current, route = []) {
+      order.replaceChildren(...visited.map((place) => {
+        const chip = document.createElement('span');
+        chip.className = 'order-chip';
+        if (place === current) chip.classList.add('current');
+        if (route.includes(place)) chip.classList.add('route');
+        chip.textContent = place;
+        chip.setAttribute('aria-label', `${place} 地點`);
+        return chip;
+      }));
+    }
+
+    function markRoad(from, to, style) {
+      const key = [from, to].sort().join('-');
+      const road = roads.find((item) => item.dataset.edge === key);
+      if (road) road.classList.add(style);
+    }
+
+    async function playSearch(method) {
+      clearSearch();
+      const thisAnimation = animationId;
+      const start = startSelect.value;
+      const destination = endSelect.value;
+      const { visited, route, parent } = findRoute(method, start, destination);
+
+      dfsButton.disabled = true;
+      bfsButton.disabled = true;
+      startSelect.disabled = true;
+      endSelect.disabled = true;
+      status.textContent = `${method} 搜尋中：${start} → ${destination}`;
+      const explored = [];
+
+      for (const place of visited) {
+        if (thisAnimation !== animationId) return;
+        const element = places.find((item) => item.dataset.place === place);
+        element.classList.add('visited', 'current');
+        if (parent.has(place)) markRoad(parent.get(place), place, 'explored');
+        explored.push(place);
+        showOrder(explored, place);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        element.classList.remove('current');
+      }
+
+      if (thisAnimation !== animationId) return;
+      route.forEach((place, index) => {
+        places.find((item) => item.dataset.place === place).classList.add('route');
+        if (index > 0) markRoad(route[index - 1], place, 'route');
+      });
+      showOrder(visited, '', route);
+      const pathText = route.join(' → ');
+      status.textContent = start === destination
+        ? `${method} 完成：起點與終點相同，無須走道路。`
+        : `${method} 完成：探索 ${visited.length} 個地點，找到路徑 ${pathText}（${route.length - 1} 條道路）。`;
+      dfsButton.disabled = false;
+      bfsButton.disabled = false;
+      startSelect.disabled = false;
+      endSelect.disabled = false;
+    }
+
+    dfsButton.addEventListener('click', () => playSearch('DFS'));
+    bfsButton.addEventListener('click', () => playSearch('BFS'));
+    document.querySelector('#resetSearchButton').addEventListener('click', clearSearch);
+    startSelect.addEventListener('change', clearSearch);
+    endSelect.addEventListener('change', clearSearch);
+  </script>
 </body>
 </html>
