@@ -182,14 +182,14 @@
         <article class="step"><span class="step-number">02</span><h3>篩選與清理</h3><p>統一全半形、大小寫與空白，清除無意義標點；過濾常見語助詞，同時保留「不得、僅限、除外」及數字、時段等關鍵條件。</p></article>
         <article class="step"><span class="step-number">03</span><h3>切詞並向量化</h3><p>中文以連續 2 字及 3 字 n-gram 建立詞項，英文與數字依詞切分；院規原文及每個口語別名分別建立 TF-IDF 向量。</p></article>
         <article class="step"><span class="step-number">04</span><h3>比對問題向量</h3><p>對使用者問題套用同一套正規化與切詞方式，轉成 TF-IDF 向量，分別比對院規原文及其口語別名，取每項規定的最高餘弦相似度。</p></article>
-        <article class="step"><span class="step-number">05</span><h3>排序並篩出來源</h3><p>按相似度由高至低排序，取前 3 筆展示分數和依據；最高分低於 0.25 時不猜答案，清楚說明目前無法確認並提示改用具體關鍵詞。</p></article>
+        <article class="step"><span class="step-number">05</span><h3>排序並篩出來源</h3><p>按相似度由高至低排序，取前 3 筆展示分數和依據；最高分低於 0.35 或問題線索不足時不猜答案，清楚說明目前無法確認並提示改用具體關鍵詞。</p></article>
         <article class="step"><span class="step-number">06</span><h3>根據原文回答</h3><p>回答直接引用最高分院規片段並標示編號，旁列其他候選依據；不以檢索分數代替醫療或院方正式確認。</p></article>
       </div>
       <div class="formula">
         <article class="formula-card">
           <h3>餘弦相似度怎麼看？</h3>
           <span class="equation">cos(問題, 院規) = (Q · D) / (‖Q‖ × ‖D‖)</span>
-          <p>Q 是問題向量、D 是院規原文或單一口語別名的向量；每項規定顯示與其最相近片段的分數。分數越接近 1，詞項方向越相似；低於 0.250 不作答。頁面以小數顯示分數，也用百分比長條輔助閱讀。</p>
+          <p>Q 是問題向量、D 是院規原文或單一口語別名的向量；每項規定顯示與其最相近片段的分數。分數越接近 1，詞項方向越相似；低於 0.350 不作答。頁面以小數顯示分數，也用百分比長條輔助閱讀。</p>
         </article>
         <aside class="notice-card">
           <h3>這個示範的範圍</h3>
@@ -339,9 +339,11 @@
       content.className = "answer-text";
       const source = document.createElement("span");
       source.className = "answer-source";
-      if (best.score < 0.25) {
-        kicker.textContent = `目前不清楚 · 餘弦相似度 ${best.score.toFixed(3)}（未達 0.250 門檻）`;
-        content.textContent = "抱歉，現有院規中沒有足夠相符的資料，我不確定答案，不能據此提供回覆。請換個說法，或補充門診、探病、病房等主題及相關時段或事項。";
+      if (best.score < 0.35 || queryVector.size < 2) {
+        kicker.textContent = best.score < 0.35
+          ? `目前不清楚 · 餘弦相似度 ${best.score.toFixed(3)}（未達 0.350 門檻）`
+          : `問題資訊不足 · 餘弦相似度 ${best.score.toFixed(3)}`;
+        content.textContent = "抱歉，現有院規中沒有足夠相符的資料，或問題缺少足夠線索，我不確定答案，不能據此提供回覆。請換個說法，或補充門診、探病、病房等主題及相關時段或事項。";
         source.textContent = `最高分來源：規定 ${String(best.policy.id).padStart(2, "0")}（僅供參考）`;
       } else {
         kicker.textContent = `最高相關來源 · 餘弦相似度 ${best.score.toFixed(3)}`;
