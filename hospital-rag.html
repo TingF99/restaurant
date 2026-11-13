@@ -158,7 +158,7 @@
           <span class="panel-meta">答案附原始規定</span>
         </div>
         <div class="answer-body" id="answer" aria-live="polite">
-          <p class="answer-placeholder">送出問題後，這裡會顯示最相關規定的內容與編號。</p>
+          <p class="answer-placeholder">送出問題後，這裡會顯示最相關規定的內容與編號；若相似度未達門檻，會明確告知目前無法確認。</p>
         </div>
       </article>
       <aside class="panel" aria-labelledby="ranking-heading">
@@ -180,16 +180,16 @@
       <div class="steps">
         <article class="step"><span class="step-number">01</span><h3>整理原始資料</h3><p>將提供的 15 條院規依主題切成獨立片段；保留原始編號、限制、例外與時間資訊，並為常見說法補充檢索別名。</p></article>
         <article class="step"><span class="step-number">02</span><h3>篩選與清理</h3><p>統一全半形、大小寫與空白，清除無意義標點；過濾常見語助詞，同時保留「不得、僅限、除外」及數字、時段等關鍵條件。</p></article>
-        <article class="step"><span class="step-number">03</span><h3>切詞並向量化</h3><p>中文以單字、連續 2 字及 3 字 n-gram 建立詞項，英文與數字依詞切分；使用文件頻率加權成 TF-IDF 向量。</p></article>
-        <article class="step"><span class="step-number">04</span><h3>比對問題向量</h3><p>對使用者問題套用同一套正規化與切詞方式，轉成 TF-IDF 向量，與每一條院規逐筆計算餘弦相似度。</p></article>
-        <article class="step"><span class="step-number">05</span><h3>排序並篩出來源</h3><p>按相似度由高至低排序，取前 3 筆展示分數和依據；最高分低於 0.08 時不猜答案，提醒改用具體關鍵詞。</p></article>
+        <article class="step"><span class="step-number">03</span><h3>切詞並向量化</h3><p>中文以連續 2 字及 3 字 n-gram 建立詞項，英文與數字依詞切分；院規原文及每個口語別名分別建立 TF-IDF 向量。</p></article>
+        <article class="step"><span class="step-number">04</span><h3>比對問題向量</h3><p>對使用者問題套用同一套正規化與切詞方式，轉成 TF-IDF 向量，分別比對院規原文及其口語別名，取每項規定的最高餘弦相似度。</p></article>
+        <article class="step"><span class="step-number">05</span><h3>排序並篩出來源</h3><p>按相似度由高至低排序，取前 3 筆展示分數和依據；最高分低於 0.25 時不猜答案，清楚說明目前無法確認並提示改用具體關鍵詞。</p></article>
         <article class="step"><span class="step-number">06</span><h3>根據原文回答</h3><p>回答直接引用最高分院規片段並標示編號，旁列其他候選依據；不以檢索分數代替醫療或院方正式確認。</p></article>
       </div>
       <div class="formula">
         <article class="formula-card">
           <h3>餘弦相似度怎麼看？</h3>
           <span class="equation">cos(問題, 院規) = (Q · D) / (‖Q‖ × ‖D‖)</span>
-          <p>Q 是問題向量、D 是院規向量。分數越接近 1，詞項方向越相似；越接近 0，重疊越少。頁面以小數顯示實際分數，也用百分比長條輔助閱讀。</p>
+          <p>Q 是問題向量、D 是院規原文或單一口語別名的向量；每項規定顯示與其最相近片段的分數。分數越接近 1，詞項方向越相似；低於 0.250 不作答。頁面以小數顯示分數，也用百分比長條輔助閱讀。</p>
         </article>
         <aside class="notice-card">
           <h3>這個示範的範圍</h3>
@@ -213,21 +213,21 @@
   </main>
   <script>
     const policies = [
-      { id: 1, title: "門診服務時間", text: "週一至週五 08:30–12:00、13:30–17:00；週六僅開放上午診，週日及國定假日休診（急診室 24 小時全年無休）。" },
-      { id: 2, title: "掛號與報到", text: "請於看診時間結束前 30 分鐘完成掛號；已預約者請先至診間外插卡報到，過號需依現場護理人員安排順延看診。" },
-      { id: 3, title: "證件查驗", text: "就醫、領藥及辦理出入院手續時，請務必出示健保卡及身分證件（兒童請攜帶戶口名簿或健保卡）。" },
-      { id: 4, title: "一般病房探病時間", text: "每日開放兩個時段：中午 11:00–13:00、晚間 18:00–20:00，每次探病限 2 名訪客入內。" },
-      { id: 5, title: "加護病房（ICU）會客規定", text: "每日僅開放 10:30–11:00 及 19:00–19:30 兩個時段，家屬入內須穿著隔離衣、戴口罩並執行手部消毒。", keywords: "探病 探視 會客時間 重症病房" },
-      { id: 6, title: "陪病家屬管理", text: "每床住院病患限 1 名陪病家屬，須於入院時至護理站登記並領取「陪病證」，夜間 22:00 後實施門禁管制。" },
-      { id: 7, title: "全院禁菸與禁酒", text: "本院室內、陽台、樓梯間及戶外廣場全面禁菸、禁食檳榔及飲酒，違者將依菸害防制法舉發。" },
-      { id: 8, title: "飲食與加熱設備", text: "病房內嚴禁使用電磁爐、電湯匙、快煮鍋等高功率電器；如需加熱食物，請至各樓層茶水間使用公用微波爐。" },
-      { id: 9, title: "手機與通訊設備", text: "進入加護病房、手術室、檢查室及精密儀器區前，請將手機調為靜音或關機，以免干擾醫療設備運作。" },
-      { id: 10, title: "感染管制與防護", text: "進入醫院請全程配戴醫用口罩；若出現發燒、咳嗽等呼吸道症狀，請主動告知檢傷人員並依指引前往發燒篩檢站。", keywords: "口罩防護 全程戴口罩 醫院戴口罩" },
-      { id: 11, title: "夜間安寧維護", text: "晚間 21:30 起為住院部安寧時段，請放低交談音量並將電視、手機音量調小，避免影響病患休息。" },
-      { id: 12, title: "貴重物品保管", text: "住院期間請勿攜帶大量現金或貴重珠寶，隨身財物請自行妥善保管，院方不負保管責任。" },
-      { id: 13, title: "寵物與花束限制", text: "除合格導盲犬外，嚴禁攜帶任何寵物進入院區；另為避免花粉過敏與病菌滋生，加護病房及血液腫瘤病房禁止攜入鮮花與盆栽。" },
-      { id: 14, title: "個人隱私保護", text: "為維護病患與醫護人員隱私，未經院方與當事人許可，禁止於院內進行拍照、錄影或網路直播。" },
-      { id: 15, title: "醫療廢棄物分類", text: "沾有血液、分泌物之紗布、棉球或針具，請丟棄於護理站指定之「黃色感染性垃圾桶」，切勿投入一般垃圾桶。" }
+      { id: 1, title: "門診服務時間", text: "週一至週五 08:30–12:00、13:30–17:00；週六僅開放上午診，週日及國定假日休診（急診室 24 小時全年無休）。", keywords: "醫院幾點開 醫院幾點開門 醫院幾點營業 醫院幾點開始看診 請問醫院幾點開 幾點開門 開門時間 營業時間 開放時間 門診幾點開始 門診幾點結束 門診幾點下班 門診時間 看診時間 看診幾點開始 上午幾點看診 上午診 下午診 平日門診 假日門診 週六有門診嗎 週六看診 週日休診 國定假日休診 急診幾點 急診24小時" },
+      { id: 2, title: "掛號與報到", text: "請於看診時間結束前 30 分鐘完成掛號；已預約者請先至診間外插卡報到，過號需依現場護理人員安排順延看診。", keywords: "掛號時間 最晚掛號 門診掛號 幾點停止掛號 預約掛號 報到時間 診間報到 插健保卡 過號 遲到 看診結束前30分鐘" },
+      { id: 3, title: "證件查驗", text: "就醫、領藥及辦理出入院手續時，請務必出示健保卡及身分證件（兒童請攜帶戶口名簿或健保卡）。", keywords: "看病證件 就醫證件 健保卡 身分證 領藥證件 出院手續 入院手續 兒童證件 戶口名簿 帶什麼證件" },
+      { id: 4, title: "一般病房探病時間", text: "每日開放兩個時段：中午 11:00–13:00、晚間 18:00–20:00，每次探病限 2 名訪客入內。", keywords: "普通病房探病 一般病房探視 病房探病時間 幾點可以探病 幾點探病 探病幾點開放 探視時間 看病人 訪客探病 幾個人探病 一次幾位訪客 中午探病 晚上探病 一般病房幾點可以探病" },
+      { id: 5, title: "加護病房（ICU）會客規定", text: "每日僅開放 10:30–11:00 及 19:00–19:30 兩個時段，家屬入內須穿著隔離衣、戴口罩並執行手部消毒。", keywords: "探病 探視 會客時間 重症病房 加護病房探病 ICU探病 ICU探視 ICU會客 幾點可以看病人 加護病房幾點開放 加護病房幾點可以探病 隔離衣 手部消毒" },
+      { id: 6, title: "陪病家屬管理", text: "每床住院病患限 1 名陪病家屬，須於入院時至護理站登記並領取「陪病證」，夜間 22:00 後實施門禁管制。", keywords: "陪病 陪病證 陪病家屬 陪病人 幾個人陪病 陪病登記 護理站登記 門禁時間 晚上幾點門禁 22點門禁 住院陪同" },
+      { id: 7, title: "全院禁菸與禁酒", text: "本院室內、陽台、樓梯間及戶外廣場全面禁菸、禁食檳榔及飲酒，違者將依菸害防制法舉發。", keywords: "抽菸 吸菸 煙禁 禁菸 可以抽菸嗎 哪裡可以抽菸 喝酒 飲酒 檳榔 吃檳榔 戶外抽菸 陽台抽菸" },
+      { id: 8, title: "飲食與加熱設備", text: "病房內嚴禁使用電磁爐、電湯匙、快煮鍋等高功率電器；如需加熱食物，請至各樓層茶水間使用公用微波爐。", keywords: "病房吃東西 病房可以用快煮鍋嗎 病房能不能用快煮鍋 可以使用快煮鍋嗎 加熱食物 微波爐 微波 食物加熱 茶水間 電磁爐 電湯匙 快煮鍋 熱水壺 電器 煮東西 熱便當" },
+      { id: 9, title: "手機與通訊設備", text: "進入加護病房、手術室、檢查室及精密儀器區前，請將手機調為靜音或關機，以免干擾醫療設備運作。", keywords: "手機 手機靜音 手機關機 可以用手機嗎 手機使用 手術室 檢查室 精密儀器 電子設備 通訊設備 手機干擾" },
+      { id: 10, title: "感染管制與防護", text: "進入醫院請全程配戴醫用口罩；若出現發燒、咳嗽等呼吸道症狀，請主動告知檢傷人員並依指引前往發燒篩檢站。", keywords: "口罩防護 全程戴口罩 醫院戴口罩 去醫院要戴口罩嗎 醫院要戴口罩嗎 要戴口罩嗎 需要戴口罩 口罩規定 發燒 咳嗽 感冒 呼吸道症狀 篩檢站 發燒篩檢 生病就醫" },
+      { id: 11, title: "夜間安寧維護", text: "晚間 21:30 起為住院部安寧時段，請放低交談音量並將電視、手機音量調小，避免影響病患休息。", keywords: "安靜時間 安寧時段 晚上幾點安靜 夜間休息時間 電視音量 手機音量 降低音量 病房吵 病人休息 21點30" },
+      { id: 12, title: "貴重物品保管", text: "住院期間請勿攜帶大量現金或貴重珠寶，隨身財物請自行妥善保管，院方不負保管責任。", keywords: "貴重物品 財物保管 現金 珠寶 首飾 遺失 保管責任 隨身物品 住院帶東西" },
+      { id: 13, title: "寵物與花束限制", text: "除合格導盲犬外，嚴禁攜帶任何寵物進入院區；另為避免花粉過敏與病菌滋生，加護病房及血液腫瘤病房禁止攜入鮮花與盆栽。", keywords: "寵物 狗 貓 動物 導盲犬 鮮花 花束 盆栽 花可以帶嗎 探病帶花 ICU花 血液腫瘤病房" },
+      { id: 14, title: "個人隱私保護", text: "為維護病患與醫護人員隱私，未經院方與當事人許可，禁止於院內進行拍照、錄影或網路直播。", keywords: "拍照 照相 攝影 錄影 直播 網路直播 偷拍 隱私 可以拍照嗎 拍病人 拍醫護人員" },
+      { id: 15, title: "醫療廢棄物分類", text: "沾有血液、分泌物之紗布、棉球或針具，請丟棄於護理站指定之「黃色感染性垃圾桶」，切勿投入一般垃圾桶。", keywords: "醫療垃圾 感染性廢棄物 黃色垃圾桶 黃色垃圾 護理站垃圾 血紗布 棉球 針頭 針具 怎麼丟垃圾 分類垃圾 一般垃圾" }
     ];
 
     const stopWords = new Set(["請", "請於", "務必", "本院", "進入", "進行", "使用", "相關", "之", "及", "與", "並", "為", "若", "者"]);
@@ -238,7 +238,7 @@
       const tokens = [];
       for (const segment of segments) {
         if (/^[\p{Script=Han}]+$/u.test(segment)) {
-          for (let size = 1; size <= 3; size += 1) {
+          for (let size = 2; size <= 3; size += 1) {
             for (let index = 0; index <= segment.length - size; index += 1) {
               const token = segment.slice(index, index + size);
               if (!stopWords.has(token)) tokens.push(token);
@@ -251,10 +251,14 @@
       return tokens;
     }
 
-    const documentTokens = policies.map((policy) => tokenize(`${policy.title} ${policy.text} ${policy.keywords || ""}`));
+    const documentTokens = policies.map((policy) => tokenize(`${policy.title} ${policy.text}`));
+    const keywordPhrases = policies.map((policy) =>
+      (policy.keywords || "").split(/\s+/).filter(Boolean).map(tokenize)
+    );
     const documentFrequency = new Map();
-    for (const tokens of documentTokens) {
-      for (const token of new Set(tokens)) {
+    for (let index = 0; index < policies.length; index += 1) {
+      const allTokens = documentTokens[index].concat(...keywordPhrases[index]);
+      for (const token of new Set(allTokens)) {
         documentFrequency.set(token, (documentFrequency.get(token) || 0) + 1);
       }
     }
@@ -271,6 +275,9 @@
       }
       return vector;
     }
+
+    const documentVectors = documentTokens.map(vectorize);
+    const keywordVectors = keywordPhrases.map((phrases) => phrases.map(vectorize));
 
     function cosineSimilarity(left, right) {
       let dotProduct = 0;
@@ -316,7 +323,10 @@
       const queryVector = vectorize(queryTokens);
       const ranked = policies.map((policy, index) => ({
         policy,
-        score: cosineSimilarity(queryVector, vectorize(documentTokens[index]))
+        score: Math.max(
+          cosineSimilarity(queryVector, documentVectors[index]),
+          ...keywordVectors[index].map((vector) => cosineSimilarity(queryVector, vector))
+        )
       })).sort((left, right) => right.score - left.score || left.policy.id - right.policy.id);
       const topResults = ranked.slice(0, 3);
       const best = topResults[0];
@@ -329,9 +339,9 @@
       content.className = "answer-text";
       const source = document.createElement("span");
       source.className = "answer-source";
-      if (best.score < 0.08) {
-        kicker.textContent = "尚未找到足夠相關的院規";
-        content.textContent = "目前問題與資料庫內容的詞彙相似度偏低，為避免提供不可靠資訊，請試著加入地點、時段或事項等具體關鍵詞。";
+      if (best.score < 0.25) {
+        kicker.textContent = `目前不清楚 · 餘弦相似度 ${best.score.toFixed(3)}（未達 0.250 門檻）`;
+        content.textContent = "抱歉，現有院規中沒有足夠相符的資料，我不確定答案，不能據此提供回覆。請換個說法，或補充門診、探病、病房等主題及相關時段或事項。";
         source.textContent = `最高分來源：規定 ${String(best.policy.id).padStart(2, "0")}（僅供參考）`;
       } else {
         kicker.textContent = `最高相關來源 · 餘弦相似度 ${best.score.toFixed(3)}`;
