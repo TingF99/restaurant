@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <meta name="description" content="以 TF-IDF 向量檢索與餘弦相似度查詢 15 項院內服務及住院規定。">
+  <title>院規小幫手｜RAG 問答</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #20332e;
+      --muted: #65756f;
+      --paper: #f5f7f4;
+      --surface: #fff;
+      --line: #e0e8e2;
+      --green: #23755e;
+      --green-dark: #185b48;
+      --green-pale: #eaf4ef;
+      --gold: #a76b19;
+      --gold-pale: #fbf3e5;
+      --shadow: 0 16px 42px #28493b0d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background: radial-gradient(ellipse at 92% 0, #e4f0e9 0, transparent 34%), var(--paper);
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.65;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1080px, calc(100% - 36px)); margin: 0 auto; padding: 26px 0 52px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: .82rem; font-weight: 850; letter-spacing: .04em; }
+    .brand-mark { display: grid; place-items: center; width: 36px; aspect-ratio: 1; border-radius: 12px; color: white; background: var(--green); }
+    .local-badge { padding: 5px 10px; border: 1px solid #d5e5da; border-radius: 99px; color: var(--green-dark); background: #f6fbf7; font-size: .7rem; font-weight: 750; }
+    .hero { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 34px 0 22px; }
+    .eyebrow { margin: 0 0 7px; color: var(--green); font-size: .7rem; font-weight: 850; letter-spacing: .14em; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.15; letter-spacing: -.04em; }
+    .intro { max-width: 670px; margin: 10px 0 0; color: var(--muted); font-size: .9rem; }
+    .hero-stat { flex: 0 0 auto; padding: 11px 15px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: #ffffffa6; font-size: .74rem; text-align: center; }
+    .hero-stat strong { display: block; color: var(--green-dark); font-size: 1.2rem; }
+    .panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+    .search-panel { padding: 20px; }
+    .search-label { display: block; margin-bottom: 8px; font-size: .85rem; font-weight: 800; }
+    .search-row { display: flex; gap: 9px; }
+    .search-row input { min-width: 0; flex: 1; height: 48px; padding: 0 14px; border: 1px solid #d8e2da; border-radius: 8px; outline: none; color: var(--ink); background: #fff; }
+    .search-row input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #23755e1b; }
+    .search-row input::placeholder { color: #9aa8a0; }
+    .ask-button { min-width: 104px; padding: 0 16px; border: 0; border-radius: 8px; color: white; background: var(--green); font-weight: 800; transition: background .15s, transform .15s; }
+    .ask-button:hover { transform: translateY(-1px); background: var(--green-dark); }
+    .examples { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 13px; }
+    .examples-label { margin-right: 2px; color: var(--muted); font-size: .72rem; }
+    .example { padding: 5px 10px; border: 1px solid var(--line); border-radius: 99px; color: #53665e; background: #fbfcfa; font-size: .7rem; }
+    .example:hover { border-color: #9cbdab; color: var(--green-dark); background: var(--green-pale); }
+    .feedback { min-height: 22px; margin: 9px 0 0; color: #a34a3d; font-size: .74rem; }
+    .answer-layout { display: grid; grid-template-columns: minmax(0, 1.14fr) minmax(270px, .86fr); gap: 14px; margin-top: 14px; align-items: start; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+    .panel-heading h2 { margin: 0; font-size: .88rem; }
+    .panel-meta { color: var(--muted); font-size: .68rem; }
+    .answer-body { min-height: 172px; padding: 18px; }
+    .answer-placeholder { margin: 16px 0; color: #829089; font-size: .85rem; }
+    .answer-kicker { margin: 0 0 8px; color: var(--green); font-size: .68rem; font-weight: 850; letter-spacing: .08em; }
+    .answer-text { margin: 0; font-size: .92rem; line-height: 1.85; }
+    .answer-source { display: inline-flex; margin-top: 14px; padding: 4px 9px; border-radius: 5px; color: var(--green-dark); background: var(--green-pale); font-size: .7rem; font-weight: 750; }
+    .results-list { display: grid; gap: 0; }
+    .result-item { padding: 12px 16px; border-bottom: 1px solid #edf1ed; }
+    .result-item:last-child { border-bottom: 0; }
+    .result-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .result-title { font-size: .75rem; font-weight: 800; }
+    .score { flex: 0 0 auto; color: var(--green-dark); font: 800 .72rem/1.2 "Cascadia Code", Consolas, monospace; }
+    .score-track { height: 4px; margin: 7px 0; overflow: hidden; border-radius: 99px; background: #edf2ee; }
+    .score-fill { height: 100%; border-radius: inherit; background: #64a383; }
+    .result-excerpt { margin: 0; color: var(--muted); font-size: .69rem; line-height: 1.6; }
+    .method { margin-top: 28px; }
+    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 0 0 12px; }
+    .section-heading h2 { margin: 0; font-size: 1.12rem; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: .72rem; }
+    .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .step { min-height: 130px; padding: 15px; border: 1px solid var(--line); border-radius: 10px; background: #ffffffc9; }
+    .step-number { display: inline-grid; place-items: center; width: 25px; aspect-ratio: 1; margin-bottom: 8px; border-radius: 8px; color: var(--green-dark); background: var(--green-pale); font: 800 .72rem "Cascadia Code", Consolas, monospace; }
+    .step h3 { margin: 0 0 5px; font-size: .8rem; }
+    .step p { margin: 0; color: var(--muted); font-size: .7rem; line-height: 1.65; }
+    .formula { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(230px, .85fr); gap: 12px; margin-top: 12px; }
+    .formula-card, .notice-card { padding: 15px 17px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+    .formula-card h3, .notice-card h3 { margin: 0 0 6px; font-size: .8rem; }
+    .equation { display: block; overflow-wrap: anywhere; color: var(--green-dark); font: 750 .8rem/1.7 "Cascadia Code", Consolas, monospace; }
+    .formula-card p, .notice-card p { margin: 5px 0 0; color: var(--muted); font-size: .7rem; line-height: 1.65; }
+    .notice-card { border-color: #efe3cd; background: #fffcf6; }
+    .notice-card h3 { color: #7d561d; }
+    .policy { margin-top: 28px; }
+    .policy-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+    .policy-card { padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+    .policy-id { display: inline-block; margin-bottom: 5px; color: var(--green); font: 800 .67rem "Cascadia Code", Consolas, monospace; }
+    .policy-card h3 { margin: 0 0 5px; font-size: .76rem; }
+    .policy-card p { margin: 0; color: var(--muted); font-size: .68rem; line-height: 1.65; }
+    footer { display: flex; justify-content: space-between; gap: 14px; margin-top: 23px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: .67rem; }
+    @media (max-width: 720px) {
+      .hero { align-items: start; }
+      .hero-stat { display: none; }
+      .answer-layout { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .policy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 480px) {
+      .shell { width: min(100% - 24px, 1080px); padding-top: 16px; }
+      .search-panel { padding: 15px; }
+      .search-row { flex-direction: column; }
+      .ask-button { min-height: 44px; }
+      .steps, .policy-grid, .formula { grid-template-columns: 1fr; }
+      .section-heading { display: block; }
+      .section-heading p { margin-top: 4px; }
+      footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <nav class="topbar" aria-label="網站資訊">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">院</span><span>院內資訊服務</span></div>
+      <span class="local-badge">RAG · 本機檢索，不傳送問題</span>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">HOSPITAL GUIDE / 01</p>
+        <h1>院規小幫手</h1>
+        <p class="intro">輸入門診、探病或住院相關問題，系統會從 15 項院內規定找出最相關的資料，並顯示來源與餘弦相似度。</p>
+      </div>
+      <div class="hero-stat"><strong>15 項</strong>已整理規定</div>
+    </header>
+
+    <section class="panel search-panel" aria-labelledby="question-title">
+      <label id="question-title" class="search-label" for="question">您想詢問什麼？</label>
+      <form id="search-form">
+        <div class="search-row">
+          <input id="question" name="question" type="search" maxlength="160" placeholder="例如：加護病房幾點可以探病？" autocomplete="off" aria-describedby="search-feedback">
+          <button class="ask-button" type="submit">查詢規定</button>
+        </div>
+      </form>
+      <div class="examples" aria-label="範例問題">
+        <span class="examples-label">試試看</span>
+        <button class="example" type="button" data-question="週六有門診嗎？">週六有門診嗎？</button>
+        <button class="example" type="button" data-question="加護病房幾點可以探病？">ICU 會客時間</button>
+        <button class="example" type="button" data-question="病房可以用快煮鍋嗎？">病房能用快煮鍋嗎？</button>
+        <button class="example" type="button" data-question="進入醫院是否需全程配戴醫用口罩？">需要戴口罩嗎？</button>
+      </div>
+      <p class="feedback" id="search-feedback" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="answer-layout" aria-label="檢索回答與相似度排名">
+      <article class="panel" aria-labelledby="answer-heading">
+        <div class="panel-heading">
+          <h2 id="answer-heading">依據院規整理的回答</h2>
+          <span class="panel-meta">答案附原始規定</span>
+        </div>
+        <div class="answer-body" id="answer" aria-live="polite">
+          <p class="answer-placeholder">送出問題後，這裡會顯示最相關規定的內容與編號。</p>
+        </div>
+      </article>
+      <aside class="panel" aria-labelledby="ranking-heading">
+        <div class="panel-heading">
+          <h2 id="ranking-heading">檢索排名</h2>
+          <span class="panel-meta">餘弦相似度 · 由高至低</span>
+        </div>
+        <div class="results-list" id="results" aria-live="polite">
+          <p class="answer-placeholder" style="padding: 0 16px">送出問題後顯示最相關的 3 筆資料。</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="method" aria-labelledby="method-heading">
+      <div class="section-heading">
+        <h2 id="method-heading">RAG 與資料篩選流程</h2>
+        <p>Retrieval-Augmented Generation：先檢索，再根據來源回答。</p>
+      </div>
+      <div class="steps">
+        <article class="step"><span class="step-number">01</span><h3>整理原始資料</h3><p>將提供的 15 條院規依主題切成獨立片段；保留原始編號、限制、例外與時間資訊，並為常見說法補充檢索別名。</p></article>
+        <article class="step"><span class="step-number">02</span><h3>篩選與清理</h3><p>統一全半形、大小寫與空白，清除無意義標點；過濾常見語助詞，同時保留「不得、僅限、除外」及數字、時段等關鍵條件。</p></article>
+        <article class="step"><span class="step-number">03</span><h3>切詞並向量化</h3><p>中文以單字、連續 2 字及 3 字 n-gram 建立詞項，英文與數字依詞切分；使用文件頻率加權成 TF-IDF 向量。</p></article>
+        <article class="step"><span class="step-number">04</span><h3>比對問題向量</h3><p>對使用者問題套用同一套正規化與切詞方式，轉成 TF-IDF 向量，與每一條院規逐筆計算餘弦相似度。</p></article>
+        <article class="step"><span class="step-number">05</span><h3>排序並篩出來源</h3><p>按相似度由高至低排序，取前 3 筆展示分數和依據；最高分低於 0.08 時不猜答案，提醒改用具體關鍵詞。</p></article>
+        <article class="step"><span class="step-number">06</span><h3>根據原文回答</h3><p>回答直接引用最高分院規片段並標示編號，旁列其他候選依據；不以檢索分數代替醫療或院方正式確認。</p></article>
+      </div>
+      <div class="formula">
+        <article class="formula-card">
+          <h3>餘弦相似度怎麼看？</h3>
+          <span class="equation">cos(問題, 院規) = (Q · D) / (‖Q‖ × ‖D‖)</span>
+          <p>Q 是問題向量、D 是院規向量。分數越接近 1，詞項方向越相似；越接近 0，重疊越少。頁面以小數顯示實際分數，也用百分比長條輔助閱讀。</p>
+        </article>
+        <aside class="notice-card">
+          <h3>這個示範的範圍</h3>
+          <p>使用瀏覽器端 TF-IDF 字元 n-gram，不呼叫外部模型或服務，因此資料不會離開本機。這是可檢視的文字檢索 RAG 示範，不等同能理解同義詞的語意嵌入模型；相似度是詞彙相關度，不代表醫療判斷或事實正確率。</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="policy" aria-labelledby="policy-heading">
+      <div class="section-heading">
+        <h2 id="policy-heading">已納入的院內規定</h2>
+        <p>檢索來源 · 共 15 筆</p>
+      </div>
+      <div class="policy-grid" id="policy-list"></div>
+    </section>
+
+    <footer>
+      <span>院規內容依提供資料整理；實際安排請以院方公告及現場人員指引為準。</span>
+      <span>本頁為前端示範，查詢不會送往伺服器。</span>
+    </footer>
+  </main>
+  <script>
+    const policies = [
+      { id: 1, title: "門診服務時間", text: "週一至週五 08:30–12:00、13:30–17:00；週六僅開放上午診，週日及國定假日休診（急診室 24 小時全年無休）。" },
+      { id: 2, title: "掛號與報到", text: "請於看診時間結束前 30 分鐘完成掛號；已預約者請先至診間外插卡報到，過號需依現場護理人員安排順延看診。" },
+      { id: 3, title: "證件查驗", text: "就醫、領藥及辦理出入院手續時，請務必出示健保卡及身分證件（兒童請攜帶戶口名簿或健保卡）。" },
+      { id: 4, title: "一般病房探病時間", text: "每日開放兩個時段：中午 11:00–13:00、晚間 18:00–20:00，每次探病限 2 名訪客入內。" },
+      { id: 5, title: "加護病房（ICU）會客規定", text: "每日僅開放 10:30–11:00 及 19:00–19:30 兩個時段，家屬入內須穿著隔離衣、戴口罩並執行手部消毒。", keywords: "探病 探視 會客時間 重症病房" },
+      { id: 6, title: "陪病家屬管理", text: "每床住院病患限 1 名陪病家屬，須於入院時至護理站登記並領取「陪病證」，夜間 22:00 後實施門禁管制。" },
+      { id: 7, title: "全院禁菸與禁酒", text: "本院室內、陽台、樓梯間及戶外廣場全面禁菸、禁食檳榔及飲酒，違者將依菸害防制法舉發。" },
+      { id: 8, title: "飲食與加熱設備", text: "病房內嚴禁使用電磁爐、電湯匙、快煮鍋等高功率電器；如需加熱食物，請至各樓層茶水間使用公用微波爐。" },
+      { id: 9, title: "手機與通訊設備", text: "進入加護病房、手術室、檢查室及精密儀器區前，請將手機調為靜音或關機，以免干擾醫療設備運作。" },
+      { id: 10, title: "感染管制與防護", text: "進入醫院請全程配戴醫用口罩；若出現發燒、咳嗽等呼吸道症狀，請主動告知檢傷人員並依指引前往發燒篩檢站。", keywords: "口罩防護 全程戴口罩 醫院戴口罩" },
+      { id: 11, title: "夜間安寧維護", text: "晚間 21:30 起為住院部安寧時段，請放低交談音量並將電視、手機音量調小，避免影響病患休息。" },
+      { id: 12, title: "貴重物品保管", text: "住院期間請勿攜帶大量現金或貴重珠寶，隨身財物請自行妥善保管，院方不負保管責任。" },
+      { id: 13, title: "寵物與花束限制", text: "除合格導盲犬外，嚴禁攜帶任何寵物進入院區；另為避免花粉過敏與病菌滋生，加護病房及血液腫瘤病房禁止攜入鮮花與盆栽。" },
+      { id: 14, title: "個人隱私保護", text: "為維護病患與醫護人員隱私，未經院方與當事人許可，禁止於院內進行拍照、錄影或網路直播。" },
+      { id: 15, title: "醫療廢棄物分類", text: "沾有血液、分泌物之紗布、棉球或針具，請丟棄於護理站指定之「黃色感染性垃圾桶」，切勿投入一般垃圾桶。" }
+    ];
+
+    const stopWords = new Set(["請", "請於", "務必", "本院", "進入", "進行", "使用", "相關", "之", "及", "與", "並", "為", "若", "者"]);
+    const normalize = (text) => text.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+    function tokenize(text) {
+      const segments = normalize(text).match(/[\p{Script=Han}]+|[a-z0-9]+/gu) || [];
+      const tokens = [];
+      for (const segment of segments) {
+        if (/^[\p{Script=Han}]+$/u.test(segment)) {
+          for (let size = 1; size <= 3; size += 1) {
+            for (let index = 0; index <= segment.length - size; index += 1) {
+              const token = segment.slice(index, index + size);
+              if (!stopWords.has(token)) tokens.push(token);
+            }
+          }
+        } else if (!stopWords.has(segment)) {
+          tokens.push(segment);
+        }
+      }
+      return tokens;
+    }
+
+    const documentTokens = policies.map((policy) => tokenize(`${policy.title} ${policy.text} ${policy.keywords || ""}`));
+    const documentFrequency = new Map();
+    for (const tokens of documentTokens) {
+      for (const token of new Set(tokens)) {
+        documentFrequency.set(token, (documentFrequency.get(token) || 0) + 1);
+      }
+    }
+
+    function vectorize(tokens) {
+      const counts = new Map();
+      for (const token of tokens) counts.set(token, (counts.get(token) || 0) + 1);
+      const vector = new Map();
+      for (const [token, count] of counts) {
+        const frequency = documentFrequency.get(token);
+        if (!frequency) continue;
+        const idf = Math.log(1 + (policies.length + 1) / (frequency + 1)) + 1;
+        vector.set(token, (count / tokens.length) * idf);
+      }
+      return vector;
+    }
+
+    function cosineSimilarity(left, right) {
+      let dotProduct = 0;
+      let leftMagnitudeSquared = 0;
+      let rightMagnitudeSquared = 0;
+      for (const value of left.values()) leftMagnitudeSquared += value * value;
+      for (const value of right.values()) rightMagnitudeSquared += value * value;
+      for (const [token, value] of left) dotProduct += value * (right.get(token) || 0);
+      const denominator = Math.sqrt(leftMagnitudeSquared * rightMagnitudeSquared);
+      return denominator === 0 ? 0 : dotProduct / denominator;
+    }
+
+    const questionInput = document.getElementById("question");
+    const answer = document.getElementById("answer");
+    const results = document.getElementById("results");
+    const feedback = document.getElementById("search-feedback");
+
+    function renderPolicies() {
+      const list = document.getElementById("policy-list");
+      for (const policy of policies) {
+        const card = document.createElement("article");
+        card.className = "policy-card";
+        const id = document.createElement("span");
+        id.className = "policy-id";
+        id.textContent = `規定 ${String(policy.id).padStart(2, "0")}`;
+        const title = document.createElement("h3");
+        title.textContent = policy.title;
+        const text = document.createElement("p");
+        text.textContent = policy.text;
+        card.append(id, title, text);
+        list.append(card);
+      }
+    }
+
+    function showResults(question) {
+      const queryTokens = tokenize(question);
+      if (!queryTokens.length) {
+        feedback.textContent = "請輸入問題或關鍵詞後再查詢。";
+        questionInput.focus();
+        return;
+      }
+
+      const queryVector = vectorize(queryTokens);
+      const ranked = policies.map((policy, index) => ({
+        policy,
+        score: cosineSimilarity(queryVector, vectorize(documentTokens[index]))
+      })).sort((left, right) => right.score - left.score || left.policy.id - right.policy.id);
+      const topResults = ranked.slice(0, 3);
+      const best = topResults[0];
+      feedback.textContent = "";
+      answer.replaceChildren();
+
+      const kicker = document.createElement("p");
+      kicker.className = "answer-kicker";
+      const content = document.createElement("p");
+      content.className = "answer-text";
+      const source = document.createElement("span");
+      source.className = "answer-source";
+      if (best.score < 0.08) {
+        kicker.textContent = "尚未找到足夠相關的院規";
+        content.textContent = "目前問題與資料庫內容的詞彙相似度偏低，為避免提供不可靠資訊，請試著加入地點、時段或事項等具體關鍵詞。";
+        source.textContent = `最高分來源：規定 ${String(best.policy.id).padStart(2, "0")}（僅供參考）`;
+      } else {
+        kicker.textContent = `最高相關來源 · 餘弦相似度 ${best.score.toFixed(3)}`;
+        content.textContent = best.policy.text;
+        source.textContent = `依據規定 ${String(best.policy.id).padStart(2, "0")}：${best.policy.title}`;
+      }
+      answer.append(kicker, content, source);
+
+      results.replaceChildren();
+      for (const { policy, score } of topResults) {
+        const item = document.createElement("article");
+        item.className = "result-item";
+        const top = document.createElement("div");
+        top.className = "result-top";
+        const title = document.createElement("span");
+        title.className = "result-title";
+        title.textContent = `${String(policy.id).padStart(2, "0")} · ${policy.title}`;
+        const scoreLabel = document.createElement("span");
+        scoreLabel.className = "score";
+        scoreLabel.textContent = score.toFixed(3);
+        scoreLabel.setAttribute("aria-label", `餘弦相似度 ${score.toFixed(3)}`);
+        const track = document.createElement("div");
+        track.className = "score-track";
+        track.setAttribute("aria-hidden", "true");
+        const fill = document.createElement("div");
+        fill.className = "score-fill";
+        fill.style.width = `${Math.max(0, Math.min(100, score * 100))}%`;
+        track.append(fill);
+        const excerpt = document.createElement("p");
+        excerpt.className = "result-excerpt";
+        excerpt.textContent = policy.text;
+        top.append(title, scoreLabel);
+        item.append(top, track, excerpt);
+        results.append(item);
+      }
+    }
+
+    document.getElementById("search-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      showResults(questionInput.value);
+    });
+
+    document.querySelectorAll(".example").forEach((button) => {
+      button.addEventListener("click", () => {
+        questionInput.value = button.dataset.question;
+        showResults(questionInput.value);
+      });
+    });
+
+    renderPolicies();
+  </script>
+</body>
+</html>
