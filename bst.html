@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f3ec">
+  <title>二元搜尋樹走訪 | BST / 03</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202a26;
+      --muted: #727c75;
+      --paper: #f4f3ec;
+      --white: #fffefa;
+      --line: #dcded4;
+      --green: #26735c;
+      --green-dark: #1e5d4a;
+      --green-pale: #e6f0e9;
+      --coral: #cb694d;
+      --coral-pale: #faece6;
+      --gold: #d3a443;
+      --shadow: 0 12px 36px #243c300d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--ink);
+      background: radial-gradient(ellipse at 93% 0%, #e1eadf 0, transparent 31%), var(--paper);
+      font-family: "Aptos", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .shell { width: min(1160px, calc(100% - 32px)); margin: 0 auto; padding: 22px 0 44px; }
+    .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: .76rem; font-weight: 850; letter-spacing: .08em; }
+    .brand-mark { display: grid; place-items: center; width: 34px; aspect-ratio: 1; border-radius: 9px; color: white; background: var(--green); font: 850 .67rem/1 "Cascadia Code", Consolas, monospace; }
+    .home-link { color: var(--muted); font-size: .75rem; text-decoration: none; }
+    .home-link:hover { color: var(--green); text-decoration: underline; }
+    header { display: flex; justify-content: space-between; align-items: end; gap: 18px; padding: 25px 0 19px; }
+    .kicker { margin: 0 0 7px; color: var(--green); font-size: .68rem; font-weight: 850; letter-spacing: .12em; }
+    h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.55rem); line-height: 1.16; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: .87rem; line-height: 1.6; }
+    .root-stamp { display: grid; flex: 0 0 66px; width: 66px; aspect-ratio: 1; place-items: center; border: 1px solid #bfd0c1; border-radius: 50%; color: var(--green-dark); background: #edf3eb; }
+    .root-stamp span { margin-bottom: -11px; font-size: .52rem; font-weight: 800; letter-spacing: .1em; }
+    .root-stamp strong { margin-top: -10px; font: 800 1.35rem/1 "Cascadia Code", Consolas, monospace; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 13px; align-items: start; }
+    .panel { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--white); box-shadow: var(--shadow); }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    .panel-heading h2 { margin: 0; font-size: .9rem; }
+    .panel-meta { color: var(--muted); font-size: .66rem; font-weight: 700; letter-spacing: .06em; }
+    .form-pad { display: grid; gap: 10px; padding: 14px 16px 15px; }
+    label { display: grid; gap: 6px; color: #505b53; font-size: .73rem; font-weight: 750; }
+    input { width: 100%; height: 39px; padding: 0 10px; border: 1px solid #d8ddd4; border-radius: 5px; outline: none; color: var(--ink); background: white; font: .8rem "Cascadia Code", Consolas, monospace; }
+    input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #26735c1c; }
+    input::placeholder { color: #9ba29a; }
+    .field-hint { margin: -3px 0 0; color: var(--muted); font-size: .67rem; line-height: 1.5; }
+    .button-row { display: grid; grid-template-columns: 1fr auto; gap: 7px; }
+    .button { min-height: 37px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: white; font-size: .72rem; font-weight: 800; transition: background .15s, border-color .15s, transform .15s; }
+    .button:hover { transform: translateY(-1px); border-color: #aab8aa; background: #f7f9f4; }
+    .button.primary { color: white; border-color: var(--green); background: var(--green); }
+    .button.primary:hover { background: var(--green-dark); }
+    .button.square { width: 39px; padding: 0; font-size: 1rem; }
+    .notice { min-height: 16px; margin: 0; color: var(--coral); font-size: .69rem; line-height: 1.45; }
+    .tree-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 11px 15px; border-bottom: 1px solid #eef0e9; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: .66rem; }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .legend i { width: 9px; height: 9px; border-radius: 50%; background: #dfe9df; border: 1px solid #9eb49f; }
+    .legend i.current { background: var(--gold); border-color: #a77b24; }
+    .legend i.done { background: var(--coral-pale); border-color: var(--coral); }
+    .tree-count { color: var(--muted); font-size: .68rem; }
+    .tree-scroll { width: 100%; min-height: 300px; overflow: auto; scrollbar-color: #bdc9bd transparent; scrollbar-width: thin; }
+    .tree-canvas { display: block; min-width: 600px; }
+    .tree-empty { display: grid; place-items: center; min-height: 285px; padding: 28px; color: var(--muted); text-align: center; font-size: .8rem; }
+    .tree-edge { stroke: #bdc9bd; stroke-width: 2; }
+    .tree-node circle { fill: #f6f8f2; stroke: #b9c8b8; stroke-width: 2; transition: fill .18s, stroke .18s; }
+    .tree-node text { fill: var(--ink); text-anchor: middle; dominant-baseline: central; font: 750 14px "Cascadia Code", Consolas, monospace; pointer-events: none; }
+    .tree-node.done circle { fill: var(--coral-pale); stroke: var(--coral); }
+    .tree-node.current circle { fill: var(--gold); stroke: #a77b24; stroke-width: 3; }
+    .tree-node.current text { fill: #302810; }
+    .array-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-height: 46px; padding: 10px 15px; border-top: 1px solid var(--line); }
+    .strip-label { margin-right: 4px; color: var(--muted); font-size: .66rem; font-weight: 750; }
+    .chip { min-width: 29px; padding: 4px 6px; border: 1px solid #dfe4d8; border-radius: 4px; background: #f7f8f2; text-align: center; font: 700 .66rem "Cascadia Code", Consolas, monospace; }
+    .chip.current { border-color: #a77b24; background: #f5e8bd; }
+    .traversal-panel { margin-top: 13px; }
+    .traversal-content { display: grid; gap: 10px; padding: 13px 15px 15px; }
+    .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mode-button { min-height: 33px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 5px; color: #505b53; background: white; font-size: .7rem; font-weight: 800; }
+    .mode-button[aria-pressed="true"] { color: white; border-color: var(--green); background: var(--green); }
+    .output-box { display: grid; gap: 7px; padding: 10px 11px; border: 1px solid #e6e9df; border-radius: 5px; background: #fafbf7; }
+    .output-title { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: .65rem; font-weight: 750; }
+    .output-values { min-height: 24px; color: var(--green-dark); font: 750 .8rem/1.6 "Cascadia Code", Consolas, monospace; overflow-wrap: anywhere; }
+    .step-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .step-controls .button { min-width: 62px; }
+    .step-counter { margin-left: auto; color: var(--muted); font: 700 .67rem "Cascadia Code", Consolas, monospace; }
+    .explanation { min-height: 38px; margin: 0; color: #4f5c53; font-size: .73rem; line-height: 1.6; }
+    .debug-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 9px; }
+    .structure-box { min-width: 0; padding: 9px 10px; border: 1px solid #e6e9df; border-radius: 5px; }
+    .structure-box h3 { margin: 0 0 7px; color: var(--muted); font-size: .65rem; }
+    .structure-values { min-height: 30px; color: var(--ink); font: .66rem/1.6 "Cascadia Code", Consolas, monospace; overflow-wrap: anywhere; }
+    .stack { display: flex; flex-direction: column-reverse; gap: 4px; }
+    .stack-item, .queue-item { padding: 3px 6px; border: 1px solid #dfe4d8; border-radius: 4px; background: #f7f8f2; }
+    .stack-item.top { border-color: #a77b24; background: #f5e8bd; }
+    .queue-list { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+    .code-panel { margin-top: 13px; }
+    .code-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(180px, .8fr); gap: 12px; padding: 13px 15px 15px; }
+    .code-block { margin: 0; overflow-x: auto; padding: 9px 0; border-radius: 5px; color: #e8eee8; background: #202c29; font: .68rem/1.7 "Cascadia Code", Consolas, monospace; }
+    .code-line { display: block; min-height: 1.7em; padding: 0 10px; white-space: pre; }
+    .code-line.active { color: #202a26; background: #eacb77; }
+    .line-number { display: inline-block; width: 23px; color: #91a29a; user-select: none; }
+    .code-line.active .line-number { color: #655321; }
+    .code-explain { align-self: center; margin: 0; color: #536057; font-size: .74rem; line-height: 1.7; }
+    .principles { margin-top: 13px; }
+    .principle-copy { padding: 13px 16px 5px; color: #536057; font-size: .76rem; line-height: 1.75; }
+    .table-wrap { overflow-x: auto; padding: 0 16px 15px; }
+    table { width: 100%; min-width: 600px; border-collapse: collapse; font-size: .7rem; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid #e9ece4; text-align: left; vertical-align: top; }
+    th { color: var(--muted); background: #f8f9f4; font-size: .65rem; white-space: nowrap; }
+    td strong { color: var(--green-dark); }
+    .footnote { margin: 13px 0 0; color: var(--muted); font-size: .67rem; text-align: right; }
+    @media (max-width: 850px) {
+      .workspace { grid-template-columns: minmax(0, 1fr); }
+      .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .controls .panel:last-child { grid-column: 1 / -1; }
+      .tree-scroll { min-height: 250px; }
+    }
+    @media (max-width: 520px) {
+      .shell { width: calc(100% - 22px); padding-top: 14px; }
+      header { padding: 20px 0 15px; }
+      .root-stamp { flex-basis: 55px; width: 55px; }
+      .root-stamp strong { font-size: 1.15rem; }
+      .controls { grid-template-columns: 1fr; }
+      .controls .panel:last-child { grid-column: auto; }
+      .code-layout { grid-template-columns: minmax(0, 1fr); }
+      .code-explain { min-height: 38px; }
+      .debug-grid { grid-template-columns: minmax(0, 1fr); }
+      .step-counter { margin-left: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topline">
+      <div class="brand"><span class="brand-mark">BST</span><span>DATA STRUCTURE / 03</span></div>
+      <a class="home-link" href="index.html">← 回首頁</a>
+    </div>
+    <header>
+      <div>
+        <p class="kicker">BINARY SEARCH TREE / TRAVERSAL</p>
+        <h1>走訪這棵樹。</h1>
+        <p class="subtitle">建立或逐步插入節點，再用前序、中序、後序與層序讀取同一棵二元搜尋樹。</p>
+      </div>
+      <div class="root-stamp" aria-label="根節點"><span>ROOT</span><strong id="rootValue">—</strong></div>
+    </header>
+
+    <div class="workspace">
+      <section>
+        <div class="panel" aria-labelledby="treeHeading">
+          <div class="panel-heading"><h2 id="treeHeading">目前的二元搜尋樹</h2><span class="panel-meta">LEFT &lt; NODE &lt; RIGHT</span></div>
+          <div class="tree-toolbar">
+            <div class="legend" aria-label="圖例">
+              <span><i></i>節點</span><span><i class="current"></i>目前步驟</span><span><i class="done"></i>已走訪</span>
+            </div>
+            <span class="tree-count" id="treeCount">0 個節點</span>
+          </div>
+          <div class="tree-scroll" id="treeScroll" role="region" aria-label="二元搜尋樹，可水平捲動">
+            <svg class="tree-canvas" id="treeCanvas" role="img" aria-label="二元搜尋樹"></svg>
+            <div class="tree-empty" id="treeEmpty">建立一棵樹後，就能開始逐步走訪。</div>
+          </div>
+          <div class="array-strip" id="insertedValues" aria-label="插入順序"></div>
+        </div>
+
+        <section class="panel traversal-panel" aria-labelledby="traversalHeading">
+          <div class="panel-heading"><h2 id="traversalHeading">走訪這棵樹</h2><span class="panel-meta">STEP BY STEP</span></div>
+          <div class="traversal-content">
+            <div class="mode-row" role="group" aria-label="走訪方式">
+              <button class="mode-button" type="button" data-mode="preorder" aria-pressed="true">前序</button>
+              <button class="mode-button" type="button" data-mode="inorder" aria-pressed="false">中序</button>
+              <button class="mode-button" type="button" data-mode="postorder" aria-pressed="false">後序</button>
+              <button class="mode-button" type="button" data-mode="levelorder" aria-pressed="false">層序</button>
+            </div>
+            <div class="output-box" aria-live="polite">
+              <div class="output-title"><span>輸出列</span><span id="outputCount">0 個輸出</span></div>
+              <div class="output-values" id="outputValues">建立樹後按「下一步」開始。</div>
+            </div>
+            <div class="step-controls">
+              <button class="button" id="previousStep" type="button">上一步</button>
+              <button class="button primary" id="nextStep" type="button">下一步</button>
+              <button class="button" id="runAll" type="button">播放全部</button>
+              <span class="step-counter" id="stepCounter">0 / 0</span>
+            </div>
+            <p class="explanation" id="stepExplanation" aria-live="polite">選擇走訪方式，逐步觀察節點順序與遞迴狀態。</p>
+            <div class="debug-grid">
+              <section class="structure-box" aria-labelledby="stackHeading">
+                <h3 id="stackHeading">呼叫堆疊</h3>
+                <div class="structure-values stack" id="stackValues">尚未開始</div>
+              </section>
+              <section class="structure-box" aria-labelledby="queueHeading">
+                <h3 id="queueHeading">佇列（前 → 後）</h3>
+                <div class="structure-values queue-list" id="queueValues">尚未開始</div>
+              </section>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="controls">
+        <section class="panel" aria-labelledby="buildHeading">
+          <div class="panel-heading"><h2 id="buildHeading">建立 BST</h2><span class="panel-meta">BUILD</span></div>
+          <form class="form-pad" id="sequenceForm">
+            <label for="sequenceInput">輸入整數序列
+              <input id="sequenceInput" value="8, 3, 10, 1, 6, 14, 4, 7, 13" placeholder="例如：8, 3, 10, 1, 6" autocomplete="off" spellcheck="false">
+            </label>
+            <p class="field-hint">依輸入順序逐筆插入；逗號或空格分隔。重複值會略過。</p>
+            <button class="button primary" type="submit">建立二元搜尋樹</button>
+            <p class="notice" id="sequenceNotice" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="panel" aria-labelledby="addHeading">
+          <div class="panel-heading"><h2 id="addHeading">插入下一個節點</h2><span class="panel-meta">INSERT</span></div>
+          <form class="form-pad" id="addForm">
+            <label for="addInput">新增整數
+              <input id="addInput" type="number" step="1" placeholder="輸入整數" inputmode="numeric">
+            </label>
+            <div class="button-row">
+              <button class="button primary" type="submit">插入節點</button>
+              <button class="button square" id="resetButton" type="button" aria-label="清空樹" title="清空樹">↺</button>
+            </div>
+            <p class="notice" id="addNotice" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="panel" aria-labelledby="statusHeading">
+          <div class="panel-heading"><h2 id="statusHeading">樹的資訊</h2><span class="panel-meta">OVERVIEW</span></div>
+          <div class="form-pad">
+            <div class="output-title"><span>節點數</span><strong id="nodeCount">0</strong></div>
+            <div class="output-title"><span>樹高</span><strong id="treeHeight">0 層</strong></div>
+            <div class="output-title"><span>中序結果</span><strong id="sortedValues">—</strong></div>
+            <p class="field-hint">BST 性質：左子樹值較小，右子樹值較大。</p>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="panel code-panel" aria-labelledby="codeHeading">
+      <div class="panel-heading"><h2 id="codeHeading">C++ 逐行對照</h2><span class="panel-meta" id="codeMode">PREORDER</span></div>
+      <div class="code-layout">
+        <pre class="code-block" id="codeBlock" aria-label="C++ 程式碼"></pre>
+        <p class="code-explain" id="codeExplanation">每按一次「下一步」，程式會往下執行一個關鍵動作，並同步更新輸出與資料結構。</p>
+      </div>
+    </section>
+
+    <section class="panel principles" aria-labelledby="principleHeading">
+      <div class="panel-heading"><h2 id="principleHeading">原理：四種走訪如何不同？</h2><span class="panel-meta">COMPARE</span></div>
+      <p class="principle-copy">深度優先走訪（DFS）沿著子樹深入，前序／中序／後序的差別是「處理目前節點」相對於走訪左右子樹的時機。層序走訪（BFS）則用佇列由上而下、同層由左至右；BST 的中序結果會由小到大排列。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>方法</th><th>處理節點的順序</th><th>使用結構</th><th>時間</th><th>額外空間</th></tr></thead>
+          <tbody>
+            <tr><td><strong>前序</strong> Preorder</td><td>根 → 左 → 右</td><td>遞迴呼叫堆疊</td><td>O(n)</td><td>O(h)</td></tr>
+            <tr><td><strong>中序</strong> Inorder</td><td>左 → 根 → 右</td><td>遞迴呼叫堆疊</td><td>O(n)</td><td>O(h)</td></tr>
+            <tr><td><strong>後序</strong> Postorder</td><td>左 → 右 → 根</td><td>遞迴呼叫堆疊</td><td>O(n)</td><td>O(h)</td></tr>
+            <tr><td><strong>層序</strong> Level order</td><td>逐層由左至右</td><td>FIFO 佇列</td><td>O(n)</td><td>O(w)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="principle-copy">n 是節點數，h 是樹高，w 是樹的最大寬度。遞迴走訪的空間為 O(h)；層序走訪的佇列最多同時存放一層節點，空間為 O(w)。</p>
+    </section>
+    <p class="footnote">二元搜尋樹 · 每個節點最多有一個左子節點與一個右子節點</p>
+  </main>
+
+  <script>
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const MODE_NAMES = {
+      preorder: '前序',
+      inorder: '中序',
+      postorder: '後序',
+      levelorder: '層序'
+    };
+    const CODE = {
+      preorder: [
+        'void preorder(Node* node) {',
+        '  if (node == nullptr) return;',
+        "  cout << node->value << ' ';",
+        '  preorder(node->left);',
+        '  preorder(node->right);',
+        '}'
+      ],
+      inorder: [
+        'void inorder(Node* node) {',
+        '  if (node == nullptr) return;',
+        '  inorder(node->left);',
+        "  cout << node->value << ' ';",
+        '  inorder(node->right);',
+        '}'
+      ],
+      postorder: [
+        'void postorder(Node* node) {',
+        '  if (node == nullptr) return;',
+        '  postorder(node->left);',
+        '  postorder(node->right);',
+        "  cout << node->value << ' ';",
+        '}'
+      ],
+      levelorder: [
+        'void levelorder(Node* root) {',
+        '  if (root == nullptr) return;',
+        '  queue<Node*> q;',
+        '  q.push(root);',
+        '  while (!q.empty()) {',
+        '    Node* node = q.front(); q.pop();',
+        "    cout << node->value << ' ';",
+        '    if (node->left) q.push(node->left);',
+        '    if (node->right) q.push(node->right);',
+        '  }',
+        '}'
+      ]
+    };
+    const LINE_EXPLANATIONS = {
+      preorder: {
+        1: '呼叫走訪函式，將目前節點放入呼叫堆疊。',
+        2: '檢查目前節點是否為空；空節點不再往下走。',
+        3: '先輸出目前節點，因此前序是「根 → 左 → 右」。',
+        4: '遞迴走訪左子樹。',
+        5: '左子樹完成後，遞迴走訪右子樹。',
+        6: '目前節點的子樹走訪完成，函式返回上一層。'
+      },
+      inorder: {
+        1: '呼叫走訪函式，將目前節點放入呼叫堆疊。',
+        2: '檢查目前節點是否為空；空節點不再往下走。',
+        3: '先走訪左子樹。',
+        4: '左子樹完成後才輸出目前節點。',
+        5: '接著走訪右子樹；BST 中序結果會由小到大。',
+        6: '目前節點的子樹走訪完成，函式返回上一層。'
+      },
+      postorder: {
+        1: '呼叫走訪函式，將目前節點放入呼叫堆疊。',
+        2: '檢查目前節點是否為空；空節點不再往下走。',
+        3: '先走訪左子樹。',
+        4: '左子樹完成後，再走訪右子樹。',
+        5: '左右子樹都完成後，最後輸出目前節點。',
+        6: '目前節點的子樹走訪完成，函式返回上一層。'
+      },
+      levelorder: {
+        1: '開始層序走訪；每次取出佇列前端的節點。',
+        2: '空樹沒有節點可走訪，直接返回。',
+        3: '建立 FIFO 佇列，用來記錄等待走訪的節點。',
+        4: '先把根節點放進佇列。',
+        5: '佇列還有節點就繼續；空了代表走訪完成。',
+        6: '取出佇列最前面的節點，準備處理它。',
+        7: '輸出剛取出的節點。',
+        8: '若有左子節點，將它加入佇列尾端。',
+        9: '若有右子節點，將它加入佇列尾端。',
+        10: '完成這一輪，回到 while 檢查下一個節點。',
+        11: '佇列已空，層序走訪完成。'
+      }
+    };
+
+    let root = null;
+    let inserted = [];
+    let mode = 'preorder';
+    let steps = [];
+    let stepIndex = 0;
+    let playTimer = null;
+
+    const elements = {
+      sequenceForm: document.querySelector('#sequenceForm'),
+      sequenceInput: document.querySelector('#sequenceInput'),
+      sequenceNotice: document.querySelector('#sequenceNotice'),
+      addForm: document.querySelector('#addForm'),
+      addInput: document.querySelector('#addInput'),
+      addNotice: document.querySelector('#addNotice'),
+      resetButton: document.querySelector('#resetButton'),
+      rootValue: document.querySelector('#rootValue'),
+      treeCount: document.querySelector('#treeCount'),
+      treeCanvas: document.querySelector('#treeCanvas'),
+      treeEmpty: document.querySelector('#treeEmpty'),
+      insertedValues: document.querySelector('#insertedValues'),
+      nodeCount: document.querySelector('#nodeCount'),
+      treeHeight: document.querySelector('#treeHeight'),
+      sortedValues: document.querySelector('#sortedValues'),
+      outputValues: document.querySelector('#outputValues'),
+      outputCount: document.querySelector('#outputCount'),
+      previousStep: document.querySelector('#previousStep'),
+      nextStep: document.querySelector('#nextStep'),
+      runAll: document.querySelector('#runAll'),
+      stepCounter: document.querySelector('#stepCounter'),
+      stepExplanation: document.querySelector('#stepExplanation'),
+      stackValues: document.querySelector('#stackValues'),
+      queueValues: document.querySelector('#queueValues'),
+      codeBlock: document.querySelector('#codeBlock'),
+      codeMode: document.querySelector('#codeMode'),
+      codeExplanation: document.querySelector('#codeExplanation')
+    };
+
+    function parseSequence(raw) {
+      const text = raw.trim();
+      if (!text) return [];
+      const values = text.split(/[\s,，、;；]+/).filter(Boolean).map(Number);
+      if (values.some((value) => !Number.isSafeInteger(value))) return null;
+      return values;
+    }
+
+    function insertNode(value) {
+      const node = { value, left: null, right: null };
+      if (!root) {
+        root = node;
+        return true;
+      }
+      let current = root;
+      while (true) {
+        if (value === current.value) return false;
+        const side = value < current.value ? 'left' : 'right';
+        if (!current[side]) {
+          current[side] = node;
+          return true;
+        }
+        current = current[side];
+      }
+    }
+
+    function createSvgElement(name, attributes = {}) {
+      const element = document.createElementNS(SVG_NS, name);
+      Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+      return element;
+    }
+
+    function collectNodes(node, depth = 0, result = []) {
+      if (!node) return result;
+      result.push({ node, depth });
+      collectNodes(node.left, depth + 1, result);
+      collectNodes(node.right, depth + 1, result);
+      return result;
+    }
+
+    function treeHeight(node) {
+      if (!node) return 0;
+      return 1 + Math.max(treeHeight(node.left), treeHeight(node.right));
+    }
+
+    function renderTree() {
+      const nodes = collectNodes(root);
+      const visited = new Set();
+      const state = steps[stepIndex - 1];
+      steps.slice(0, stepIndex).forEach((step) => {
+        if (step.visitedValue !== undefined) visited.add(step.visitedValue);
+      });
+      const currentValue = state ? state.nodeValue : undefined;
+      elements.treeCanvas.replaceChildren();
+      elements.insertedValues.replaceChildren();
+      elements.rootValue.textContent = root ? String(root.value) : '—';
+      elements.treeCount.textContent = `${nodes.length} 個節點`;
+      elements.nodeCount.textContent = String(nodes.length);
+      elements.treeHeight.textContent = `${treeHeight(root)} 層`;
+      const sorted = [...inserted].sort((a, b) => a - b);
+      elements.sortedValues.textContent = sorted.length ? sorted.join(', ') : '—';
+      const label = document.createElement('span');
+      label.className = 'strip-label';
+      label.textContent = '插入順序';
+      elements.insertedValues.append(label);
+      inserted.forEach((value) => {
+        const chip = document.createElement('span');
+        chip.className = `chip${value === currentValue ? ' current' : ''}`;
+        chip.textContent = String(value);
+        elements.insertedValues.append(chip);
+      });
+
+      if (!nodes.length) {
+        elements.treeCanvas.style.display = 'none';
+        elements.treeEmpty.style.display = 'grid';
+        return;
+      }
+      elements.treeCanvas.style.display = 'block';
+      elements.treeEmpty.style.display = 'none';
+      const maxDepth = Math.max(...nodes.map((entry) => entry.depth));
+      const width = Math.max(600, 70 * 2 ** Math.min(maxDepth, 8));
+      const height = Math.max(260, 74 * (maxDepth + 1) + 52);
+      const positions = new Map();
+      let inorderIndex = 0;
+      function assignPosition(node, depth) {
+        if (!node) return;
+        assignPosition(node.left, depth + 1);
+        positions.set(node, {
+          x: 42 + (inorderIndex + 0.5) * ((width - 84) / nodes.length),
+          y: 38 + depth * 74
+        });
+        inorderIndex += 1;
+        assignPosition(node.right, depth + 1);
+      }
+      assignPosition(root, 0);
+      elements.treeCanvas.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      elements.treeCanvas.setAttribute('width', String(width));
+      elements.treeCanvas.setAttribute('height', String(height));
+      elements.treeCanvas.style.width = `${width}px`;
+      elements.treeCanvas.setAttribute('aria-label', `包含 ${nodes.length} 個節點的二元搜尋樹，根節點為 ${root.value}`);
+
+      nodes.forEach(({ node }) => {
+        [['left', node.left], ['right', node.right]].forEach(([, child]) => {
+          if (!child) return;
+          const from = positions.get(node);
+          const to = positions.get(child);
+          elements.treeCanvas.append(createSvgElement('line', {
+            x1: from.x, y1: from.y + 21, x2: to.x, y2: to.y - 21, class: 'tree-edge'
+          }));
+        });
+      });
+      nodes.forEach(({ node }) => {
+        const { x, y } = positions.get(node);
+        const classes = ['tree-node'];
+        if (visited.has(node.value)) classes.push('done');
+        if (node.value === currentValue) classes.push('current');
+        const group = createSvgElement('g', { class: classes.join(' '), transform: `translate(${x} ${y})` });
+        group.append(createSvgElement('circle', { r: 23 }));
+        const text = createSvgElement('text', { y: 1 });
+        text.textContent = String(node.value);
+        group.append(text);
+        elements.treeCanvas.append(group);
+      });
+    }
+
+    function makeStep(line, explanation, options = {}) {
+      return {
+        line,
+        explanation,
+        nodeValue: options.nodeValue,
+        visitedValue: options.visitedValue,
+        output: [...(options.output || [])],
+        stack: [...(options.stack || [])],
+        queue: [...(options.queue || [])]
+      };
+    }
+
+    function buildRecursiveTrace() {
+      const trace = [];
+      const output = [];
+      const stack = [];
+      const lineOrder = [3, 4, 5];
+      const returnLine = 6;
+
+      function visit(node) {
+        stack.push(node ? String(node.value) : '∅');
+        trace.push(makeStep(1, `${LINE_EXPLANATIONS[mode][1]}目前呼叫 ${node ? node.value : '空節點'}。`, {
+          nodeValue: node ? node.value : undefined, output, stack
+        }));
+        trace.push(makeStep(2, node
+          ? `節點 ${node.value} 不是空節點，繼續執行。`
+          : '這是空子樹，直接返回，不輸出任何值。', {
+          nodeValue: node ? node.value : undefined, output, stack
+        }));
+        if (!node) {
+          trace.push(makeStep(2, `空節點返回呼叫端，堆疊頂端的 ∅ 移除。`, {
+            output, stack: stack.slice(0, -1)
+          }));
+          stack.pop();
+          return;
+        }
+        lineOrder.forEach((line) => {
+          const lineAction = line === 3 && mode === 'preorder'
+            ? () => {
+                output.push(node.value);
+                trace.push(makeStep(line, `輸出 ${node.value}。前序先處理根節點。`, {
+                  nodeValue: node.value, visitedValue: node.value, output, stack
+                }));
+              }
+            : line === 4 && mode === 'inorder'
+              ? () => {
+                  output.push(node.value);
+                  trace.push(makeStep(line, `輸出 ${node.value}。左子樹已完成，因此中序在此處理根。`, {
+                    nodeValue: node.value, visitedValue: node.value, output, stack
+                  }));
+                }
+              : line === 5 && mode === 'postorder'
+                ? () => {
+                    output.push(node.value);
+                    trace.push(makeStep(line, `輸出 ${node.value}。左右子樹都完成後才處理根。`, {
+                      nodeValue: node.value, visitedValue: node.value, output, stack
+                    }));
+                  }
+                : () => {
+                    const side = line === (mode === 'preorder' ? 4 : 3) ? 'left' : 'right';
+                    const child = node[side];
+                    trace.push(makeStep(line, child
+                      ? `從 ${node.value} 前往${side === 'left' ? '左' : '右'}子節點 ${child.value}。`
+                      : `${node.value} 沒有${side === 'left' ? '左' : '右'}子節點，呼叫空節點返回。`, {
+                      nodeValue: node.value, output, stack
+                    }));
+                    visit(child);
+                  };
+          lineAction();
+        });
+        trace.push(makeStep(returnLine, `節點 ${node.value} 的左右子樹已完成，返回上一層。`, {
+          nodeValue: node.value, visitedValue: node.value, output, stack
+        }));
+        stack.pop();
+      }
+      visit(root);
+      trace.push(makeStep(0, '整棵樹走訪完成。', { output }));
+      return trace;
+    }
+
+    function buildLevelTrace() {
+      const trace = [];
+      const output = [];
+      const queue = [];
+      trace.push(makeStep(1, '開始層序走訪，準備處理根節點。', { output, queue }));
+      trace.push(makeStep(2, root ? '根節點存在，可以開始走訪。' : '這是空樹，沒有節點可以走訪。', { output, queue }));
+      if (!root) return trace;
+      trace.push(makeStep(3, '建立一個先進先出的佇列。', { output, queue }));
+      queue.push(root);
+      trace.push(makeStep(4, `將根節點 ${root.value} 放進佇列尾端。`, { output, queue: queue.map((node) => node.value), nodeValue: root.value }));
+      while (queue.length) {
+        trace.push(makeStep(5, `佇列不為空，還有 ${queue.length} 個節點等候處理。`, {
+          output, queue: queue.map((node) => node.value)
+        }));
+        const node = queue.shift();
+        trace.push(makeStep(6, `取出佇列前端的 ${node.value}。`, {
+          output, queue: queue.map((item) => item.value), nodeValue: node.value
+        }));
+        output.push(node.value);
+        trace.push(makeStep(7, `輸出 ${node.value}。`, {
+          output, queue: queue.map((item) => item.value), nodeValue: node.value, visitedValue: node.value
+        }));
+        [['left', 8], ['right', 9]].forEach(([side, line]) => {
+          const child = node[side];
+          if (child) queue.push(child);
+          trace.push(makeStep(line, child
+            ? `將 ${node.value} 的${side === 'left' ? '左' : '右'}子節點 ${child.value} 加到佇列尾端。`
+            : `${node.value} 沒有${side === 'left' ? '左' : '右'}子節點，不加入佇列。`, {
+            output, queue: queue.map((item) => item.value), nodeValue: node.value
+          }));
+        });
+        trace.push(makeStep(10, '這一輪完成，回到 while 檢查佇列。', {
+          output, queue: queue.map((item) => item.value), nodeValue: node.value, visitedValue: node.value
+        }));
+      }
+      trace.push(makeStep(5, '佇列已空，所有節點都已處理。', { output, queue: [] }));
+      trace.push(makeStep(11, '層序走訪完成。', { output, queue: [] }));
+      return trace;
+    }
+
+    function rebuildSteps() {
+      stopPlayback();
+      steps = root ? (mode === 'levelorder' ? buildLevelTrace() : buildRecursiveTrace()) : [];
+      stepIndex = 0;
+      elements.outputValues.textContent = root ? '按「下一步」開始走訪。' : '建立樹後按「下一步」開始。';
+      elements.outputCount.textContent = '0 個輸出';
+      elements.stepExplanation.textContent = root
+        ? `目前選擇${MODE_NAMES[mode]}走訪，按「下一步」查看每個遞迴呼叫或佇列操作。`
+        : '請先建立一棵二元搜尋樹。';
+      elements.stackValues.textContent = '尚未開始';
+      elements.queueValues.textContent = '尚未開始';
+      elements.stepCounter.textContent = `0 / ${steps.length}`;
+      elements.previousStep.disabled = true;
+      elements.nextStep.disabled = !steps.length;
+      elements.runAll.disabled = !steps.length;
+      renderCode(0);
+      renderTree();
+    }
+
+    function renderCode(activeLine) {
+      elements.codeBlock.replaceChildren();
+      CODE[mode].forEach((code, index) => {
+        const lineNumber = index + 1;
+        const line = document.createElement('span');
+        line.className = `code-line${lineNumber === activeLine ? ' active' : ''}`;
+        const number = document.createElement('span');
+        number.className = 'line-number';
+        number.textContent = String(lineNumber).padStart(2, '0');
+        line.append(number, document.createTextNode(code));
+        elements.codeBlock.append(line);
+      });
+      elements.codeMode.textContent = mode.toUpperCase();
+    }
+
+    function renderState() {
+      const state = stepIndex ? steps[stepIndex - 1] : null;
+      elements.stepCounter.textContent = `${stepIndex} / ${steps.length}`;
+      elements.previousStep.disabled = stepIndex === 0;
+      elements.nextStep.disabled = stepIndex >= steps.length;
+      elements.runAll.disabled = stepIndex >= steps.length || !steps.length;
+      elements.outputValues.textContent = state && state.output.length ? state.output.join('  →  ') : '（尚無輸出）';
+      elements.outputCount.textContent = `${state ? state.output.length : 0} 個輸出`;
+      elements.stepExplanation.textContent = state ? state.explanation : `目前選擇${MODE_NAMES[mode]}走訪，按「下一步」開始。`;
+      elements.codeExplanation.textContent = state ? state.explanation : '每按一次「下一步」，程式會往下執行一個關鍵動作，並同步更新輸出與資料結構。';
+      renderCode(state ? state.line : 0);
+      renderStructure(elements.stackValues, state ? state.stack : [], 'stack');
+      renderStructure(elements.queueValues, state ? state.queue : [], 'queue');
+      renderTree();
+    }
+
+    function renderStructure(container, values, type) {
+      container.replaceChildren();
+      if (!values.length) {
+        container.textContent = type === 'stack' ? '（空）' : '（空）';
+        return;
+      }
+      values.forEach((value, index) => {
+        const item = document.createElement('span');
+        item.className = type === 'stack'
+          ? `stack-item${index === values.length - 1 ? ' top' : ''}`
+          : 'queue-item';
+        item.textContent = String(value);
+        container.append(item);
+      });
+    }
+
+    function stopPlayback() {
+      if (playTimer !== null) {
+        window.clearInterval(playTimer);
+        playTimer = null;
+      }
+      elements.runAll.textContent = '播放全部';
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      document.querySelectorAll('.mode-button').forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+      });
+      rebuildSteps();
+    }
+
+    function resetTraversal() {
+      rebuildSteps();
+    }
+
+    elements.sequenceForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const values = parseSequence(elements.sequenceInput.value);
+      if (values === null) {
+        elements.sequenceNotice.textContent = '請輸入有效整數，並用逗號或空格分隔。';
+        return;
+      }
+      root = null;
+      inserted = [];
+      let duplicates = 0;
+      values.forEach((value) => {
+        if (insertNode(value)) inserted.push(value);
+        else duplicates += 1;
+      });
+      elements.sequenceNotice.textContent = `已插入 ${inserted.length} 個節點。${duplicates ? `略過 ${duplicates} 個重複值。` : ''}`;
+      elements.addNotice.textContent = '';
+      rebuildSteps();
+    });
+
+    elements.addForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const raw = elements.addInput.value;
+      const value = Number(raw);
+      if (!raw || !Number.isSafeInteger(value)) {
+        elements.addNotice.textContent = '請輸入一個有效整數。';
+        return;
+      }
+      if (!insertNode(value)) {
+        elements.addNotice.textContent = `${value} 已存在，重複值不會插入。`;
+        return;
+      }
+      inserted.push(value);
+      elements.addInput.value = '';
+      elements.addNotice.textContent = `已插入 ${value}；走訪步驟已重新計算。`;
+      elements.sequenceNotice.textContent = '';
+      rebuildSteps();
+    });
+
+    document.querySelectorAll('.mode-button').forEach((button) => {
+      button.addEventListener('click', () => setMode(button.dataset.mode));
+    });
+    elements.nextStep.addEventListener('click', () => {
+      if (stepIndex < steps.length) {
+        stepIndex += 1;
+        renderState();
+      }
+    });
+    elements.previousStep.addEventListener('click', () => {
+      if (stepIndex > 0) {
+        stepIndex -= 1;
+        renderState();
+      }
+    });
+    elements.runAll.addEventListener('click', () => {
+      if (playTimer !== null) {
+        stopPlayback();
+        return;
+      }
+      if (stepIndex >= steps.length) return;
+      elements.runAll.textContent = '暫停';
+      playTimer = window.setInterval(() => {
+        if (stepIndex >= steps.length) {
+          stopPlayback();
+          return;
+        }
+        stepIndex += 1;
+        renderState();
+        if (stepIndex >= steps.length) stopPlayback();
+      }, 650);
+    });
+    elements.resetButton.addEventListener('click', () => {
+      stopPlayback();
+      root = null;
+      inserted = [];
+      elements.sequenceInput.value = '';
+      elements.addInput.value = '';
+      elements.sequenceNotice.textContent = '';
+      elements.addNotice.textContent = '';
+      rebuildSteps();
+    });
+
+    const initialValues = parseSequence(elements.sequenceInput.value);
+    initialValues.forEach((value) => {
+      if (insertNode(value)) inserted.push(value);
+    });
+    rebuildSteps();
+  </script>
+</body>
+</html>
